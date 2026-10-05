@@ -2,6 +2,14 @@
 
 用一个「项目资料站」理解 Cloudflare 的 14 项常用功能。中文网页教程 + 可交互演示 + 最小 Worker 接口。使用 **Workers Static Assets**，新项目不走 Pages。
 
+## 在线学习
+
+已发布到 Workers Static Assets：
+
+https://cloudflare-learning-lab.cloudflare-learning-lab.workers.dev
+
+首页是静态资源，`/api/health` 是 Worker 接口。当前发布使用本地 Wrangler；GitHub 自动部署仍按下方步骤配置。
+
 ## 立即运行
 
 需要 Node.js 24 和 npm。
