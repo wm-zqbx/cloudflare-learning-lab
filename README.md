@@ -6,9 +6,21 @@
 
 已发布到 Workers Static Assets：
 
-https://cloudflare-learning-lab.cloudflare-learning-lab.workers.dev
+https://lab.aecai.us.ci
+
+备用地址：https://cloudflare-learning-lab.cloudflare-learning-lab.workers.dev
 
 首页是静态资源，`/api/health` 是 Worker 接口。当前发布使用本地 Wrangler；GitHub 自动部署仍按下方步骤配置。
+
+## 已完成的域名实战
+
+`aecai.us.ci` 已在 Cloudflare Free 激活。DNSHE 仍负责域名管理，权威 DNS 改为 Cloudflare 的 `coco.ns.cloudflare.com` 和 `ivan.ns.cloudflare.com`。迁移前没有 DNS 记录。
+
+`wrangler.jsonc` 用 `custom_domain: true` 将 `lab.aecai.us.ci` 绑定到本 Worker。部署自动生成代理 DNS 记录和 HTTPS 证书，无需给 Worker 找一个服务器 IP，也无需手动安装证书。
+
+2026-10-05 实测：首页 HTTPS 返回 200，`/api/health` 返回 JSON；首页响应包含 `CF-Cache-Status: HIT`。这次命中说明被测静态页面使用了缓存，不能据此假设所有接口都被缓存。
+
+从 [DNS 实战课](https://lab.aecai.us.ci/learn#dns) 和 [SSL/TLS 实战课](https://lab.aecai.us.ci/learn#tls) 复习。不同主机名的 localStorage 相互独立，原 workers.dev 页面上的本地任务和学习进度不会自动迁到新域名。
 
 ## 立即运行
 
@@ -32,7 +44,7 @@ npm run dev
 
 ## 实现状态
 
-- 已实现：静态网页、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
+- 已实现：静态网页、自定义域名与 HTTPS、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
 - 真正可执行的 Worker：`GET /api/health`、`POST /api/echo`。回显接口限制 4 KiB、校验字段，不保存数据。
 - **浏览器任务仅保存在 localStorage；附件不上传；摘要不调用 AI；身份选择不是认证。**
 - 未创建云端 D1、KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源；未添加统计 beacon。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。

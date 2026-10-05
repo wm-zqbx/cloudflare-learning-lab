@@ -22,15 +22,16 @@ window.LESSONS = [
     "name": "DNS",
     "group": "发布网站",
     "headline": "让域名找到你的应用",
-    "scene": "客户记不住 workers.dev 地址，希望用 docs.example.com 访问资料站。",
+    "scene": "客户记不住 workers.dev 地址，希望用自己的域名访问资料站。本项目实际使用 lab.aecai.us.ci。",
     "role": "DNS 负责域名定位；Worker 自定义域名负责将请求路由到应用。橙云代理和仅 DNS 解析是两种不同的访问路径。",
     "quota": "免费计划提供 DNS；域名注册与续费需要另外支付。",
     "steps": [
-      "已有域名时，将域名加入 Cloudflare，并在注册商处使用 Cloudflare 指定的 nameservers。",
-      "在 Worker 的 Settings → Domains & Routes 添加 docs.example.com 自定义域名；由 Cloudflare 配置记录和证书。",
-      "检查 DNS 中的 A、AAAA、CNAME、TXT；先用测试子域名练习，确认邮件 MX 记录保持正确。"
+      "本次实际操作：将 aecai.us.ci 加入 Cloudflare Free，然后在 DNSHE 把 nameservers 改成 coco.ns.cloudflare.com 和 ivan.ns.cloudflare.com。原来没有 DNS 记录；有记录的域名必须先完整迁移。",
+      "等待 Cloudflare 的域名状态变成 Active。域名仍由 DNSHE 管理注册与续期，之后的 DNS 记录在 Cloudflare 管理。",
+      "在 wrangler.jsonc 添加 lab.aecai.us.ci 的 custom_domain 配置，再运行 npm run deploy。Cloudflare 自动建立 DNS 记录、Worker 绑定和证书，也可在 Settings → Domains & Routes 操作。",
+      "打开 https://lab.aecai.us.ci 和 /api/health：前者返回静态网页，后者运行 Worker。自定义域名绑定整个主机名，不在 pattern 后面加 /*。"
     ],
-    "code": "# 查看解析结果\ndig docs.example.com\n\n# 自定义域名示例（替换成自己的域名）\n\"routes\": [\n  { \"pattern\": \"docs.example.com\", \"custom_domain\": true }\n]",
+    "code": "# 查看权威 DNS 与站点解析\ndig NS aecai.us.ci\ndig lab.aecai.us.ci\n\n// 本项目 wrangler.jsonc 中的真实配置\n\"routes\": [\n  { \"pattern\": \"lab.aecai.us.ci\", \"custom_domain\": true }\n]\n\n# 发布后验证应用\ncurl https://lab.aecai.us.ci/api/health",
     "verify": "域名打开同一份资料站，HTTPS 无证书错误。理解为什么“DNS 已解析”不一定等于“应用已正确路由”。",
     "pitfall": "接入 DNS 不会自动把现有服务器内容搬到 Workers。不要把 Worker 地址填成 IP。改变 nameservers 前检查原有记录。",
     "doc": "https://developers.cloudflare.com/dns/"
@@ -44,11 +45,11 @@ window.LESSONS = [
     "role": "HTTPS 保护浏览器到 Cloudflare 的连接。有外部源站时，还要保护 Cloudflare 到源站的第二段连接；Workers 托管不需要自己装源站证书。",
     "quota": "Universal SSL 边缘证书免费；高级证书产品另外计费。",
     "steps": [
-      "使用 workers.dev 地址测试 HTTPS；绑定自定义域名后等待证书签发。",
+      "本项目先使用 workers.dev 测试 HTTPS，再通过 Worker Custom Domain 绑定 lab.aecai.us.ci。Cloudflare 为这个主机名自动签发证书；不用自己购买或上传证书。",
       "若连接自有服务器，给源站安装有效证书并选择 Full (strict)。",
       "在浏览器中检查证书域名、有效期，以及页面是否引用 http:// 资源。"
     ],
-    "code": "# 检查 HTTPS 响应\ncurl -I https://docs.example.com\n\n# 外部源站的常见配置\nBrowser -- HTTPS --> Cloudflare\nCloudflare -- HTTPS, valid certificate --> Origin",
+    "code": "# 检查本项目 HTTPS 响应（不跳过证书校验）\ncurl -I https://lab.aecai.us.ci\ncurl https://lab.aecai.us.ci/api/health\n\n# 本项目：Cloudflare 自己托管应用\nBrowser -- HTTPS --> Cloudflare Static Assets / Worker\n\n# 外部源站场景才需要第二段连接\nBrowser -- HTTPS --> Cloudflare\nCloudflare -- HTTPS, valid certificate --> Origin",
     "verify": "浏览器没有证书警告和混合内容错误；外部源站也使用 HTTPS。",
     "pitfall": "边缘 HTTPS 不代表源站一定加密。Flexible 模式会让 Cloudflare 到源站的连接使用 HTTP，不适合传输敏感信息。",
     "doc": "https://developers.cloudflare.com/ssl/edge-certificates/universal-ssl/"
