@@ -22,3 +22,7 @@
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 /lab.html
   Cache-Control: public, max-age=0, must-revalidate, no-transform
+/worker
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/worker.html
+  Cache-Control: public, max-age=0, must-revalidate, no-transform

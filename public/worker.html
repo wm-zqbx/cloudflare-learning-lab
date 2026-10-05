@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="通过真实 HTTP 请求学习 Cloudflare Workers 的后端校验、状态码和响应。">
+  <title>Workers 请求实验 · Cloudflare Lab</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="workers.js"></script>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">跳到正文</a>
+  <header>
+    <a class="brand" href="index.html"><span class="brand-icon">☁</span> Cloudflare <b>Lab</b></a>
+    <nav aria-label="主导航"><a href="index.html">学习地图</a><a href="learn.html#workers" class="active">Workers 实战课</a><a href="lab.html">项目演示 ↗</a></nav>
+    <a class="repo" href="https://github.com/wm-zqbx/cloudflare-learning-lab" target="_blank" rel="noopener">GitHub 源码 ↗</a>
+  </header>
+  <main id="main">
+    <div class="lab-heading"><div><p class="eyebrow">LESSON 06 / 真实 WORKER 请求</p><h1>让后端决定请求能不能通过。</h1><p class="lead">HTML 和浏览器 JS 收集输入，Cloudflare 上的 Worker 独立检查请求。这里调用的是已部署的接口，不用前端代码伪造后端结果。</p></div><span class="mode">真实接口 · 不保存数据</span></div>
+    <section class="panel">
+      <div class="cache-flow"><span>浏览器<br><small>构造 method、headers、body</small></span><b>→</b><span>Worker fetch handler<br><small>路由 → 方法 → 类型 → 大小 → 字段</small></span><b>→</b><span>HTTP 响应<br><small>状态码、响应头、JSON</small></span></div>
+      <p class="fine">前端校验帮助用户填写表单，后端校验负责真正执行规则。直接发送 HTTP 请求可以绕过网页的 maxlength；Worker 仍要检查输入。本站 /api/* 运行 Worker，其他匹配的网页文件由 Static Assets 返回。</p>
+    </section>
+    <section class="panel" id="worker-experiment">
+      <div class="panel-head"><h2>先看一次请求</h2><a href="learn.html#workers">阅读完整课程 ↗</a></div>
+      <form id="worker-form">
+        <label for="worker-title">正常请求的任务标题（可以在前后添加空格，观察后端 trim）</label>
+        <input id="worker-title" maxlength="200" value="  整理项目资料  ">
+        <label for="worker-case" class="worker-label">选择实验</label>
+        <select id="worker-case"></select>
+        <p id="worker-case-note" class="fine"></p>
+        <div class="actions"><button class="button primary" id="worker-send" type="submit">发送这次请求 →</button><button class="button secondary" id="worker-all" type="button">运行全部 7 项对比</button></div>
+      </form>
+      <p id="worker-status" class="result" role="status">选一个实验，再查看真实请求与响应。全部对比使用固定示例标题。</p>
+      <div class="worker-inspect"><div><h3>浏览器发出去的内容</h3><pre id="worker-request">等待请求…</pre></div><div><h3>Worker 实际返回的内容</h3><pre id="worker-response">等待响应…</pre></div></div>
+      <div class="cache-table-wrap"><table class="cache-table worker-table"><caption>全部对比：通过表示真实响应符合预期，错误输入被拒绝也属于实验通过。</caption><thead><tr><th scope="col">实验</th><th scope="col">预期状态</th><th scope="col">实际状态</th><th scope="col">实际结果</th><th scope="col">判断</th></tr></thead><tbody id="worker-results"></tbody></table></div>
+      <p class="fine">请求体限制 4 KiB 是本项目自己的规则，不是 Cloudflare 平台的最大上传额度。超大输入实验只发送约 5 KiB。所有接口响应使用 no-store；实验不写数据库、不记录你输入的标题到应用日志。</p>
+    </section>
+    <section class="panel">
+      <h2>读代码时先认清三个位置</h2>
+      <div class="analytics-metrics"><div><h3>public/workers.js</h3><p>在浏览器运行。把输入转为 JSON，使用 fetch("/api/echo") 发送请求，展示返回结果。</p></div><div><h3>src/worker.js</h3><p>在 Cloudflare 运行。fetch(request, env) 接收请求，做校验，然后返回 Response。</p></div><div><h3>wrangler.jsonc</h3><p>部署配置。main 指向 Worker 代码；/api/* 先执行 Worker；public/ 是静态文件目录。</p></div></div>
+      <div class="worker-inspect"><div><h3>浏览器发起请求</h3><pre>const response = await fetch("/api/echo", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ title: "准备项目资料" })
+});
+const result = await response.json();</pre></div><div><h3>后端入口的概念结构</h3><pre>// 结构示意；完整校验见 src/worker.js
+export default {
+  async fetch(request, env) {
+    // request：本次传入的 HTTP 请求
+    // env：ASSETS、未来的 DB / KV 等绑定
+    // 检查路径、方法、请求体与字段
+    return Response.json({ saved: false });
+  }
+};</pre></div></div>
+      <p class="fine">两个 fetch 含义不同：浏览器里的 fetch() 是发起网络请求；Worker 导出的 fetch handler 是收到请求时的入口。配置里的绑定让 Worker 访问资源，不能把 API 密钥放到 public/ 的浏览器代码中。</p>
+      <div class="actions"><a class="button secondary" href="https://github.com/wm-zqbx/cloudflare-learning-lab/blob/main/src/worker.js" target="_blank" rel="noopener">阅读完整后端源码 ↗</a><a class="button secondary" href="https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/" target="_blank" rel="noopener">官方 fetch handler 文档 ↗</a></div>
+    </section>
+    <section class="notice"><b>这次为什么返回 saved: false？</b><p>Worker 已经处理和校验请求，但没有连接数据库。刷新后要在云端找回任务、让其他设备看到同一条任务，下一课需要 D1。模块级数组不能充当持久数据库。</p><a href="learn.html#d1">下一课：D1 保存任务 →</a></section>
+  </main>
+  <footer><span>Cloudflare Lab · Workers 请求实验</span><span>额度核对：2026-10-05 · 以官方文档为准</span></footer>
+</body>
+</html>

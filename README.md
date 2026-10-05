@@ -39,6 +39,7 @@ npm run dev
 | `/learn.html#assets` | 场景、操作步骤、代码、验证和免费边界 |
 | `/learn.html#github` | GitHub 与 Cloudflare 联用流程 |
 | `/lab.html` | 任务、附件、笔记和访问策略演示 |
+| `/worker.html` | 请求与响应对照、7 项真实后端校验实验 |
 
 也可以双击 `public/index.html` 阅读教程和进行本地演示；真实 Worker API 需要通过 Wrangler 开发服务器或云端部署访问。
 
@@ -66,7 +67,7 @@ npm run dev
 
 ## Web Analytics 实战
 
-已创建 lab.aecai.us.ci 统计站点并选择手动 JS 安装。三个 HTML 页面通过 public/analytics.js 加载官方 beacon，CSP 仅增加所需的脚本与数据上报域名。脚本限制在正式域名运行，localhost 和 workers.dev 不采集；公开 beacon token 是站点标识，不能作为账户管理凭证。
+已创建 lab.aecai.us.ci 统计站点并选择手动 JS 安装。四个主要 HTML 页面通过 public/analytics.js 加载官方 beacon，CSP 仅增加所需的脚本与数据上报域名。脚本限制在正式域名运行，localhost 和 workers.dev 不采集；公开 beacon token 是站点标识，不能作为账户管理凭证。
 
 [进入本站统计后台](https://dash.cloudflare.com/0611ef22eaeaf6496cc593583aa4e87d/web-analytics/overview?siteTag~in=70093ed0b15c42d287d1764cec76b576&excludeBots=Yes)（需登录你自己的 Cloudflare 账户）。[演示说明](https://lab.aecai.us.ci/lab#analytics-lab)、[第 5 课](https://lab.aecai.us.ci/learn#analytics)。
 
@@ -75,6 +76,16 @@ npm run dev
 Page views 看页面浏览，Visits 按来源识别访问开始，不是独立用户数。LCP 看主要内容出现，INP 看交互响应，CLS 看布局跳动。课程的 hash 章节切换不代表新 HTML 页面，不能用页面统计直接得到学习完成率。任务与笔记没有作为自定义事件发送。
 
 脚本已加载、请求被接收、后台出现数据，是三个不同的验证阶段。后台数据可能延迟；广告拦截器和网络问题可能造成缺失。不要直接向收集端发送伪造事件。依据：[官方安装说明](https://developers.cloudflare.com/web-analytics/get-started/)、[数据收集与上报](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)。
+
+## Workers 实战
+
+[打开真实请求实验](https://lab.aecai.us.ci/worker)。页面并排显示实际发送的 method、Content-Type、请求体与 Worker 返回的 HTTP 状态、响应头和 JSON。单次请求可使用自定义标题；全部对比使用固定示例，依次运行 7 项，不写数据库。
+
+正常标题返回 200；空白标题和损坏 JSON 返回 400；错误方法返回 405；错误类型返回 415；超过应用的 4 KiB 限制返回 413；不存在的 API 返回 404。判断还核对 JSON 格式、no-store 和返回内容，不把错误输入遭到拒绝误认为实验失败。
+
+public/workers.js 在浏览器发起网络请求，src/worker.js 在 Cloudflare 收到请求后执行校验。后端未新增数据库或存储，响应中的 saved:false 仍为真实状态。页面引用 analytics.js；HTML 规范路径保留 no-transform 避免额外统计注入。
+
+[第 6 课](https://lab.aecai.us.ci/learn#workers)、[后端入口官方说明](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/)。Free 当前每天 10 万次 Worker 请求、每次 10ms CPU；等待网络不计入 CPU 时间，见 [官方额度](https://developers.cloudflare.com/workers/platform/limits/)。
 
 ## 14 项路线
 

@@ -86,15 +86,15 @@ window.LESSONS = [
     "quota": "所有计划可使用 Web Analytics；不等于无限保存所有原始事件。",
     "steps": [
       "本次已在账户 Web Analytics 创建 lab.aecai.us.ci 站点，选择手动 JS 接入（auto_install:false）。公开的 beacon token 是站点标识，不是具有管理权限的 API Token。",
-      "三个 HTML 页面加载 public/analytics.js。脚本只在 lab.aecai.us.ci 加载一次官方 beacon；本地开发和 workers.dev 备用域名不采集。以后新建 HTML 页面时也要添加这段引用。",
+      "四个主要 HTML 页面加载 public/analytics.js。脚本只在 lab.aecai.us.ci 加载一次官方 beacon；本地开发和 workers.dev 备用域名不采集。以后新建 HTML 页面时也要添加这段引用。",
       "在 public/_headers 的 CSP 中允许 static.cloudflareinsights.com 加载脚本，允许 cloudflareinsights.com 发送数据。没有移除 CSP，也没有允许任意第三方脚本。",
-      "导航请求实测发现边缘会注入另一枚统计标识。本项目给三个 HTML 页及其规范路径设置 Cache-Control 的 no-transform，阻止额外注入，只保留自己的手动安装；版本文件的一年缓存策略不变。脚本检测到不同标识时会提示冲突，而不会静默跳过。",
+      "导航请求实测发现边缘会注入另一枚统计标识。本项目给主要 HTML 页及其规范路径设置 Cache-Control 的 no-transform，阻止额外注入，只保留自己的手动安装；版本文件的一年缓存策略不变。脚本检测到不同标识时会提示冲突，而不会静默跳过。",
       "分别打开首页、课程页和演示页。稍后进入账户 Web Analytics，选择本站与最近的时间范围，查看 Page views、Visits、页面路径和来源。页面加载完成时及离开页面时会报告数据。",
       "工作中先看哪些页面常用，再看来源和性能。Page views 是页面浏览；Visits 按来源判断访问开始，不是独立用户数。一次访问可能打开多个页面。",
       "LCP 看主要内容出现速度，INP 看操作后响应是否及时，CLS 看布局是否跳动。刚开通或样本少时，部分指标可能为空；性能数据还可能在离开页面后上报。",
       "本项目课程用 #hash 切换章节，它仍是同一个 HTML 页面；不能用页面浏览量精确推断每节课的点击或学习完成率。需要业务事件时另做方案。本次没有发送表单里的任务或笔记。"
     ],
-    "code": "<!-- 本项目三个 HTML 页面中的实际引用 -->\n<script defer src=\"analytics.js\"></script>\n\n// public/analytics.js 的核心逻辑\nif (location.hostname === \"lab.aecai.us.ci\") {\n  const script = document.createElement(\"script\");\n  script.type = \"module\";\n  script.src = \"https://static.cloudflareinsights.com/beacon.min.js\";\n  script.dataset.cfBeacon = JSON.stringify({\n    token: \"29a3c522775b43658ab100b05147536c\"\n  });\n  document.body.append(script);\n}\n\n# public/_headers：只增加指定的官方域名\nscript-src 'self' https://static.cloudflareinsights.com;\nconnect-src 'self' https://cloudflareinsights.com;\n\n# HTML 手动安装时防止额外自动注入，保留校验策略\n/lab\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n# 其他 HTML 页及 .html 路径也配置相同策略",
+    "code": "<!-- 本项目四个主要 HTML 页面中的实际引用 -->\n<script defer src=\"analytics.js\"></script>\n\n// public/analytics.js 的核心逻辑\nif (location.hostname === \"lab.aecai.us.ci\") {\n  const script = document.createElement(\"script\");\n  script.type = \"module\";\n  script.src = \"https://static.cloudflareinsights.com/beacon.min.js\";\n  script.dataset.cfBeacon = JSON.stringify({\n    token: \"29a3c522775b43658ab100b05147536c\"\n  });\n  document.body.append(script);\n}\n\n# public/_headers：只增加指定的官方域名\nscript-src 'self' https://static.cloudflareinsights.com;\nconnect-src 'self' https://cloudflareinsights.com;\n\n# HTML 手动安装时防止额外自动注入，保留校验策略\n/lab\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n# 其他 HTML 页及 .html 路径也配置相同策略",
     "verify": "演示页显示统计脚本是否加载。浏览器 Network 应看到 beacon.min.js 及向 cloudflareinsights.com/cdn-cgi/rum 的 POST。后台出现本站的实际页面数据才证明汇总成功；加载提示本身不能证明入库。不要直接用 curl 制造统计事件。",
     "pitfall": "只选一种安装方式，避免重复安装。浏览器拦截器、网络或 CSP 可能影响采集，控制台也有汇总延迟。访问量不是独立人数，Web Analytics 不是任务数据库，也不是完整行为录屏或所有业务事件分析。",
     "doc": "https://developers.cloudflare.com/web-analytics/get-started/"
@@ -104,18 +104,23 @@ window.LESSONS = [
     "name": "Workers",
     "group": "开发应用",
     "headline": "在前端与数据之间处理请求",
-    "scene": "用户在网页中填写任务名称，后端要检查格式，然后返回处理结果。",
-    "role": "浏览器 POST /api/echo → Worker 校验 JSON → 返回 JSON。之后可在同一个 fetch handler 中用绑定访问 D1、KV 或 R2。",
+    "scene": "用户在网页填写任务标题，后端要独立检查请求再返回结果。在工作中，Worker 还可以负责权限校验、调用外部 API、读写数据库和生成动态响应。本站新增 worker.html 请求实验。",
+    "role": "public/workers.js 在浏览器发起 fetch(\"/api/echo\")；src/worker.js 在 Cloudflare 的 fetch handler 收到请求，依次校验路径、方法、内容类型、大小、JSON 和字段，然后返回 Response。后续通过 env 绑定访问 D1、KV、R2。",
     "quota": "Free 每天 10 万次 Worker 请求；每次调用 10ms CPU 时间，CPU 时间不是网络等待时间。",
     "steps": [
-      "阅读 src/worker.js：路由、请求方法、输入大小、字段验证、响应状态。",
-      "运行 npm run dev，在演示页点“检查 Worker”或“发送到接口”。",
-      "在 Network 查看请求与响应；试着提交错误格式，确认接口返回 400。"
+      "打开本站 /worker 请求实验页。先用正常标题发送一次请求，比较左侧 JSON 与右侧响应；标题首尾空格由后端去掉，响应包含 processedBy 和 saved:false。",
+      "再选择空白标题、损坏 JSON、错误方法、错误类型、超大请求、不存在的 API。观察 400、405、415、413、404。实验直接构造请求，可以说明为什么前端 maxlength 不能代替后端校验。",
+      "点击“运行全部 7 项对比”。所有请求都发到真实部署，判断实际状态、JSON 内容和 no-store；错误输入被后端正确拒绝也算实验通过。实验不会保存任务。",
+      "阅读 public/workers.js：浏览器 fetch() 是发起请求。阅读 src/worker.js：导出的 fetch(request, env) 是处理请求的入口。request 包含本次请求；env 提供配置好的资源绑定。",
+      "阅读 wrangler.jsonc：main 指向 src/worker.js；run_worker_first 只包含 /api/*。因此网页文件由 Static Assets 直接返回，接口运行后端代码。不要为了接口把所有静态路径都改成先执行 Worker。",
+      "在自己的电脑运行 npm run dev 并验证，再运行 npm run check、npm run build 和 npm run deploy。GitHub 保存版本，当前本地 Wrangler 负责发布；自动部署另按 GitHub 课程配置。",
+      "处理成功不等于持久保存：当前 saved:false 是真实状态。下一课通过 D1 保存任务。模块级变量不会可靠地在所有请求和地区间共享，也不能当作持久数据库。",
+      "调用外部服务时，把管理密钥保存为 Worker Secret，在后端使用。公开的浏览器代码不能保存秘密；输入校验也不等于已经完成身份验证或防滥用。"
     ],
-    "code": "// 本项目真实存在的接口\nconst response = await fetch(\"/api/echo\", {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({ title: \"准备项目资料\" })\n});\nconsole.log(await response.json());",
-    "verify": "/api/health 返回 runtime 与时间；/api/echo 返回 saved:false，明确说明只处理、不保存。",
-    "pitfall": "不要在浏览器 JS 中放 API 密钥。模块级变量不能用作持久数据库。脚本标签里的代码和 Worker 代码运行在不同环境。",
-    "doc": "https://developers.cloudflare.com/workers/"
+    "code": "// 浏览器：发起请求（public/workers.js）\nconst response = await fetch(\"/api/echo\", {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({ title: \"  准备项目资料  \" })\n});\nconsole.log(response.status, await response.json());\n\n// 后端入口结构示意：完整校验见 src/worker.js\nexport default {\n  async fetch(request, env) {\n    // request：本次传入请求\n    // env：配置的 ASSETS / DB / KV 等绑定\n    // 先检查路径、方法、大小和字段，再返回响应\n    return Response.json({ saved: false });\n  }\n};\n\n// 本项目响应内容示例\n{ \"title\": \"准备项目资料\", \"processedBy\": \"Worker fetch handler\",\n  \"saved\": false, \"explanation\": \"接口已处理请求。持久化需要接入 D1。\" }",
+    "verify": "请求实验显示真实的请求体和响应头。正常输入返回 200、trim 后的标题和 saved:false；错误输入按规则拒绝。接口返回 application/json 和 no-store。断网或纯静态服务器不会伪装成实验通过。",
+    "pitfall": "网页输入限制可以被绕过，后端要独立校验。4 KiB 是本项目规则，不是平台最大上传额度。Worker 可以处理请求，但没有数据库就不代表保存。CPU 时间不包含等待网络或数据库的时间；不能把 10ms CPU 理解成请求必须在 10ms 内完成。",
+    "doc": "https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/"
   },
   {
     "id": "d1",
