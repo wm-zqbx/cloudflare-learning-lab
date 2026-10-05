@@ -59,18 +59,22 @@ window.LESSONS = [
     "name": "CDN / 缓存 / DDoS",
     "group": "观察网站",
     "headline": "减少重复读取，让源站少做事",
-    "scene": "项目封面被重复查看。每次都回源下载，会增加延迟和服务器负担。",
-    "role": "CDN 将可缓存内容送到边缘节点。对自己的 HTTP 源站可用 Cache Rules；Workers Static Assets 已有自己的资源缓存行为。免费计划还提供基础 DDoS 防护。",
+    "scene": "项目封面、样式和公开介绍会被很多人重复读取，适合缓存；订单状态和用户资料需要及时、正确地返回。本站新增了真实缓存观察实验。",
+    "role": "浏览器缓存保留本机副本，CDN 缓存让多个访客复用边缘内容。Workers Static Assets 自动处理静态资源的边缘缓存；本项目用 _headers 配置版本文件的浏览器缓存，用 Worker 响应头禁止实时接口缓存。",
     "quota": "免费基础 CDN、缓存和 DDoS 能力；高级规则、安全服务有方案差异。",
     "steps": [
-      "把项目图片和样式作为静态资源发布；对自有源站启用 Cloudflare 代理。",
-      "给公开、可复用内容设定合适缓存策略。带用户身份的 JSON 不应直接共享缓存。",
-      "改文件时更新文件名或清除缓存，避免用户继续收到旧版本。"
+      "打开项目演示页的“真实网络实验”，点击“运行缓存对比”。它对 /style.css、/cache-demo/project.v1.json、/api/health 各请求两次，并展示实际响应头。",
+      "看 CF-Cache-Status：HIT 表示头部报告命中边缘缓存；MISS 表示报告未命中。不能保证第二次一定 HIT；本地开发或 Worker 直接生成的响应可能没有这个头。实验绕过浏览器 HTTP 缓存，所以显示的是当前网络响应，不是浏览器本地命中。",
+      "看 Cache-Control：普通静态资源默认 public, max-age=0, must-revalidate，允许保存但复用前要校验；版本文件通过 public/_headers 设置 max-age=31536000, immutable，允许浏览器长期复用。这里的浏览器策略与 Cloudflare 内部资源缓存是不同层。",
+      "查看 v1 和 v2 两个公开介绍文件。更新长期缓存的资源时，用新的版本号或内容哈希改变文件名，再更新页面引用；旧 URL 的内容保持不变。本项目没有给仍会原地更新的 style.css、app.js 或 HTML 设置一年缓存。",
+      "观察 /api/health 两次生成时间和 no-store。实时或私人接口不应直接共享缓存。_headers 只作用于静态资源；Worker 接口的头部必须由 src/worker.js 设置。",
+      "如果以后代理自己的服务器，再在 Cloudflare Cache Rules 配置合适的公开资源路径和缓存时间。不能照搬“缓存所有页面”到登录页或私人接口。本站使用 Static Assets，本次没有添加全站 Cache Rule。",
+      "DDoS 防护用于自动识别和缓解洪水式攻击，免费计划也提供标准防护。正常机器人反复提交表单仍需 Turnstile、权限和限流；本次实验没有进行攻击测试。"
     ],
-    "code": "// 用户专属响应：禁止共享缓存\nreturn Response.json(userData, {\n  headers: { \"Cache-Control\": \"private, no-store\" }\n});\n\n// 带内容版本的资源名\n/assets/cover.v2.jpg",
-    "verify": "连续请求同一资源，检查 Cache-Control、Age 和可用的 CF-Cache-Status。不同托管路径可能返回不同头部；不能仅凭请求快就认定命中缓存。",
-    "pitfall": "缓存不是实时数据库。不要缓存登录响应或私人数据。免费计划不保证你的实际网络访问速度，需在目标用户网络测试。",
-    "doc": "https://developers.cloudflare.com/cache/"
+    "code": "# public/_headers：只对版本固定的公开文件设置长期浏览器缓存\n/cache-demo/*\n  Cache-Control: public, max-age=31536000, immutable\n\n// src/worker.js：真实接口已经返回该头部\nheaders: { \"Cache-Control\": \"no-store\" }\n\n# 查看线上实际响应头\ncurl -I https://lab.aecai.us.ci/cache-demo/project.v1.json\ncurl -I https://lab.aecai.us.ci/style.css\n# health 只接受 GET，读取头部时也使用 GET\ncurl -D - https://lab.aecai.us.ci/api/health\n\n# 更新内容时发布新 URL\n/cache-demo/project.v1.json\n/cache-demo/project.v2.json",
+    "verify": "实验显示六条实际响应。版本文件返回 v1 和一年缓存策略，v2 链接返回新内容；实时接口返回 no-store。记录静态资源实际 HIT/MISS，不伪造命中状态。ETag 是内容版本标识，不是命中证明；Age 头可能缺失。",
+    "pitfall": "浏览器缓存与边缘缓存不是同一层。Static Assets 官方说明 CF-Cache-Status 有少量误判可能，可作为观察信号。缓存一年后，仅清除 Cloudflare 缓存不能保证清除用户设备的副本，因此版本 URL 很重要。基础 DDoS 防护不等于业务接口不会被滥用。",
+    "doc": "https://developers.cloudflare.com/workers/static-assets/headers/"
   },
   {
     "id": "analytics",

@@ -50,6 +50,20 @@ npm run dev
 - 未创建云端 D1、KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源；未添加统计 beacon。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
 - 当前仓库有 CI 检查与手动部署 workflow。创建仓库不等于已经部署 Cloudflare。
 
+## CDN 与缓存实战
+
+打开 [真实缓存实验](https://lab.aecai.us.ci/lab#cache-lab)，点击“运行缓存对比”。分别对普通样式文件、版本固定的公开介绍和实时 Worker 接口请求两次，显示真实 HTTP 状态、CF-Cache-Status、Cache-Control、ETag 和内容版本或生成时间。
+
+- 普通静态资源保留默认浏览器策略：可保存，每次使用前校验新鲜度。Static Assets 自动处理边缘资源缓存。
+- public/cache-demo/ 中的版本文件使用一年浏览器缓存；内容更新发布新文件名，旧版本不原地修改。
+- /api/health 由 Worker 返回 no-store，保留实时响应。
+
+实验使用 fetch 的 cache: no-store 绕过浏览器 HTTP 缓存以观察网络响应，URL 保持不变。它不测浏览器本地缓存命中，也不保证 CDN 第二次必定 HIT；本地开发通常没有边缘状态头。未新增全站 Cache Rule，也未进行 DDoS 攻击测试。
+
+配置依据：[Static Assets 响应头](https://developers.cloudflare.com/workers/static-assets/headers/)。基础 DDoS 防护的免费范围见 [官方说明](https://developers.cloudflare.com/ddos-protection/)；表单与接口仍需自己的权限及滥用保护。
+
+2026-10-05 线上验证：六次响应均为 200。style.css 与 project.v1.json 各两次报告 HIT；前者返回默认浏览器校验策略，后者返回一年缓存策略。health 两次返回 no-store 和不同的生成时间，未返回 CF-Cache-Status。v2 文件独立返回正确的新内容。该结果是一次网络环境下的观测，不保证所有地点都一样。
+
 ## 14 项路线
 
 1. Workers Static Assets：发布网页
@@ -91,6 +105,7 @@ npm run deploy
 - `public/`：全部前端文件，可直接阅读
 - `public/lessons.js`：14 课的详细内容
 - `public/app.js`：页面与本地演示逻辑
+- `public/cache.js`、`public/cache-demo/`：真实缓存观察和版本文件
 - `src/worker.js`：真实 Worker 接口
 - `wrangler.jsonc`：Cloudflare 配置，无云端资源绑定或密钥
 - `docs/schema.sql`：后续 D1 实验的表结构

@@ -2,3 +2,7 @@
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+
+# Versioned public files must never change in place. Publish v3 for new content.
+/cache-demo/*
+  Cache-Control: public, max-age=31536000, immutable
