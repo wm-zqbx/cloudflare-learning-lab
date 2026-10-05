@@ -44,10 +44,10 @@ npm run dev
 
 ## 实现状态
 
-- 已实现：静态网页、自定义域名与 HTTPS、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
+- 已实现：静态网页、自定义域名与 HTTPS、Web Analytics、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
 - 真正可执行的 Worker：`GET /api/health`、`POST /api/echo`。回显接口限制 4 KiB、校验字段，不保存数据。
 - **浏览器任务仅保存在 localStorage；附件不上传；摘要不调用 AI；身份选择不是认证。**
-- 未创建云端 D1、KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源；未添加统计 beacon。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
+- 未创建云端 D1、KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
 - 当前仓库有 CI 检查与手动部署 workflow。创建仓库不等于已经部署 Cloudflare。
 
 ## CDN 与缓存实战
@@ -63,6 +63,18 @@ npm run dev
 配置依据：[Static Assets 响应头](https://developers.cloudflare.com/workers/static-assets/headers/)。基础 DDoS 防护的免费范围见 [官方说明](https://developers.cloudflare.com/ddos-protection/)；表单与接口仍需自己的权限及滥用保护。
 
 2026-10-05 线上验证：六次响应均为 200。style.css 与 project.v1.json 各两次报告 HIT；前者返回默认浏览器校验策略，后者返回一年缓存策略。health 两次返回 no-store 和不同的生成时间，未返回 CF-Cache-Status。v2 文件独立返回正确的新内容。该结果是一次网络环境下的观测，不保证所有地点都一样。
+
+## Web Analytics 实战
+
+已创建 lab.aecai.us.ci 统计站点并选择手动 JS 安装。三个 HTML 页面通过 public/analytics.js 加载官方 beacon，CSP 仅增加所需的脚本与数据上报域名。脚本限制在正式域名运行，localhost 和 workers.dev 不采集；公开 beacon token 是站点标识，不能作为账户管理凭证。
+
+[进入本站统计后台](https://dash.cloudflare.com/0611ef22eaeaf6496cc593583aa4e87d/web-analytics/overview?siteTag~in=70093ed0b15c42d287d1764cec76b576&excludeBots=Yes)（需登录你自己的 Cloudflare 账户）。[演示说明](https://lab.aecai.us.ci/lab#analytics-lab)、[第 5 课](https://lab.aecai.us.ci/learn#analytics)。
+
+导航请求检查发现边缘会额外注入不同标识的 beacon。HTML 路径已设置 no-transform 阻止额外注入，保留本站的手动安装；版本文件缓存策略不变。脚本也会报告不同标识的冲突，避免静默跳过。
+
+Page views 看页面浏览，Visits 按来源识别访问开始，不是独立用户数。LCP 看主要内容出现，INP 看交互响应，CLS 看布局跳动。课程的 hash 章节切换不代表新 HTML 页面，不能用页面统计直接得到学习完成率。任务与笔记没有作为自定义事件发送。
+
+脚本已加载、请求被接收、后台出现数据，是三个不同的验证阶段。后台数据可能延迟；广告拦截器和网络问题可能造成缺失。不要直接向收集端发送伪造事件。依据：[官方安装说明](https://developers.cloudflare.com/web-analytics/get-started/)、[数据收集与上报](https://developers.cloudflare.com/web-analytics/data-metrics/data-origin-and-collection/)。
 
 ## 14 项路线
 
@@ -114,6 +126,6 @@ npm run deploy
 
 ## 接入时留意
 
-`.env`、`.dev.vars`、Token 和私人文件不要提交。公开应用写入需做身份、输入和滥用保护。本项目的 CSP 仅允许本站资源；接入 Turnstile 或 Web Analytics 时，按其官方要求更新 `public/_headers`。
+`.env`、`.dev.vars`、Token 和私人文件不要提交。公开应用写入需做身份、输入和滥用保护。本项目 CSP 已允许本站资源和指定的 Cloudflare Analytics 域名；接入 Turnstile 时，按其官方要求更新 `public/_headers`。
 
 本项目为个人学习示例，与 Cloudflare 官方没有隶属关系。

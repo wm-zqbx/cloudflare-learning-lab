@@ -1,8 +1,24 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self'; img-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'
 
 # Versioned public files must never change in place. Publish v3 for new content.
 /cache-demo/*
   Cache-Control: public, max-age=31536000, immutable
+
+# HTML uses manual analytics. Prevent an edge transform from injecting another beacon.
+/
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/index
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/learn
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/learn.html
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/lab
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/lab.html
+  Cache-Control: public, max-age=0, must-revalidate, no-transform

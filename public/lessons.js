@@ -81,18 +81,23 @@ window.LESSONS = [
     "name": "Web Analytics",
     "group": "观察网站",
     "headline": "知道大家是否真的在使用",
-    "scene": "想知道资料站哪些页面受欢迎，以及用户是否遇到加载缓慢。",
-    "role": "网页中的统计 beacon 收集访问与性能数据，控制台展示页面和来源。它和 Worker 后端日志用途不同。",
+    "scene": "学习站已经上线，想知道首页、教程和演示页是否有人使用，访客从哪里来，以及页面是否加载缓慢。当前已为 lab.aecai.us.ci 接入真实 Web Analytics。",
+    "role": "浏览器中的 beacon 向 Cloudflare 发送页面访问和性能数据，再由后台汇总。它反映访客浏览网页时的体验；Worker 日志记录后端执行，CDN 请求统计还包括静态文件和接口，两者与页面浏览量不是同一口径。",
     "quota": "所有计划可使用 Web Analytics；不等于无限保存所有原始事件。",
     "steps": [
-      "在 Cloudflare Web Analytics 添加站点，取得该站点的 beacon 配置。",
-      "按官方说明添加统计脚本；本项目默认没有统计脚本，添加时需要同步调整 _headers 的 CSP。",
-      "访问几次不同页面，稍后去控制台观察访问与性能数据。"
+      "本次已在账户 Web Analytics 创建 lab.aecai.us.ci 站点，选择手动 JS 接入（auto_install:false）。公开的 beacon token 是站点标识，不是具有管理权限的 API Token。",
+      "三个 HTML 页面加载 public/analytics.js。脚本只在 lab.aecai.us.ci 加载一次官方 beacon；本地开发和 workers.dev 备用域名不采集。以后新建 HTML 页面时也要添加这段引用。",
+      "在 public/_headers 的 CSP 中允许 static.cloudflareinsights.com 加载脚本，允许 cloudflareinsights.com 发送数据。没有移除 CSP，也没有允许任意第三方脚本。",
+      "导航请求实测发现边缘会注入另一枚统计标识。本项目给三个 HTML 页及其规范路径设置 Cache-Control 的 no-transform，阻止额外注入，只保留自己的手动安装；版本文件的一年缓存策略不变。脚本检测到不同标识时会提示冲突，而不会静默跳过。",
+      "分别打开首页、课程页和演示页。稍后进入账户 Web Analytics，选择本站与最近的时间范围，查看 Page views、Visits、页面路径和来源。页面加载完成时及离开页面时会报告数据。",
+      "工作中先看哪些页面常用，再看来源和性能。Page views 是页面浏览；Visits 按来源判断访问开始，不是独立用户数。一次访问可能打开多个页面。",
+      "LCP 看主要内容出现速度，INP 看操作后响应是否及时，CLS 看布局是否跳动。刚开通或样本少时，部分指标可能为空；性能数据还可能在离开页面后上报。",
+      "本项目课程用 #hash 切换章节，它仍是同一个 HTML 页面；不能用页面浏览量精确推断每节课的点击或学习完成率。需要业务事件时另做方案。本次没有发送表单里的任务或笔记。"
     ],
-    "code": "<!-- 用控制台生成的配置替换占位符后接入 -->\n<script defer\n src=\"https://static.cloudflareinsights.com/beacon.min.js\"\n data-cf-beacon='{\"token\":\"YOUR_SITE_TOKEN\"}'>\n</script>",
-    "verify": "控制台显示真实站点访问；核对浏览器没有 CSP 错误。控制台结果可能延迟，也可能被拦截器影响。",
-    "pitfall": "不要把演示页面上的计数当成真实访问统计。本站统计示意只解释数据流，未接入 beacon。",
-    "doc": "https://developers.cloudflare.com/web-analytics/"
+    "code": "<!-- 本项目三个 HTML 页面中的实际引用 -->\n<script defer src=\"analytics.js\"></script>\n\n// public/analytics.js 的核心逻辑\nif (location.hostname === \"lab.aecai.us.ci\") {\n  const script = document.createElement(\"script\");\n  script.type = \"module\";\n  script.src = \"https://static.cloudflareinsights.com/beacon.min.js\";\n  script.dataset.cfBeacon = JSON.stringify({\n    token: \"29a3c522775b43658ab100b05147536c\"\n  });\n  document.body.append(script);\n}\n\n# public/_headers：只增加指定的官方域名\nscript-src 'self' https://static.cloudflareinsights.com;\nconnect-src 'self' https://cloudflareinsights.com;\n\n# HTML 手动安装时防止额外自动注入，保留校验策略\n/lab\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n# 其他 HTML 页及 .html 路径也配置相同策略",
+    "verify": "演示页显示统计脚本是否加载。浏览器 Network 应看到 beacon.min.js 及向 cloudflareinsights.com/cdn-cgi/rum 的 POST。后台出现本站的实际页面数据才证明汇总成功；加载提示本身不能证明入库。不要直接用 curl 制造统计事件。",
+    "pitfall": "只选一种安装方式，避免重复安装。浏览器拦截器、网络或 CSP 可能影响采集，控制台也有汇总延迟。访问量不是独立人数，Web Analytics 不是任务数据库，也不是完整行为录屏或所有业务事件分析。",
+    "doc": "https://developers.cloudflare.com/web-analytics/get-started/"
   },
   {
     "id": "workers",

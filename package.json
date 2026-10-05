@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "check": "node --check public/app.js && node --check public/cache.js && node --check public/lessons.js && node --check src/worker.js && node --test tests/*.test.js",
+    "check": "node --check public/app.js && node --check public/analytics.js && node --check public/cache.js && node --check public/lessons.js && node --check src/worker.js && node --test tests/*.test.js",
     "build": "wrangler deploy --dry-run --outdir work/build"
   },
   "devDependencies": { "wrangler": "4.147.0" }
