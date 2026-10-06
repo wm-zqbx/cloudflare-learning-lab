@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Turnstile：提交前，先核验凭证</title>
+  <link rel="stylesheet" href="d1.css">
+  <link rel="stylesheet" href="r2.css">
+  <link rel="stylesheet" href="turnstile.css">
+  <script defer src="turnstile.js"></script>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <header><a href="index.html">Cloudflare 学习站</a><span>第 10 课 · Turnstile</span></header>
+  <main>
+    <h1>有表单，不等于只有人在提交。</h1>
+    <p class="intro">Turnstile 帮程序识别自动化滥用请求。<br>它提供验证依据，是否继续处理，由你的后台程序决定。</p>
+    <section aria-labelledby="problem-title">
+      <p class="step">01 · 实际问题</p><h2 id="problem-title">公开留言变成了垃圾信息入口。</h2>
+      <p>网站允许访客留言。正常人偶尔提交一次，机器人可以直接调用后台接口，连续提交大量无用内容。运营要清理垃圾，数据库和程序也在为它们工作。</p>
+      <p>只在网页上禁用按钮没用：机器人可以跳过网页。Turnstile 改善的是“接受请求前的判断”：让后台要求一张可核验的临时凭证，再决定是否继续。</p>
+      <p class="note"><strong>什么时候不需要？</strong>纯阅读的静态页面通常不必加；可信的程序之间调用，也应使用适合程序的身份认证。需要防止访客入口被自动滥用时，再考虑它。</p>
+    </section>
+    <section aria-labelledby="concept-title">
+      <p class="step">02 · 三个核心概念</p><h2 id="concept-title">检查、凭证、后台核验。</h2>
+      <dl class="concepts">
+        <div><dt>网页组件：发起检查的小部件</dt><dd>Cloudflare 在访客浏览器里运行检查，很多时候不用人做题；有时需要交互。它不是你的表单处理程序。</dd></div>
+        <div><dt>验证凭证：一次性的“检查结果单”</dt><dd>程序里常叫 token。有效期是 5 分钟，只能核验一次。它不是密码，也不表示这个访客是谁。</dd></div>
+        <div><dt>服务端核验：后台确认这张单子真实有效</dt><dd>Worker 向 Cloudflare 查询凭证，核对它是否来自本站、是否用于这个提交入口。网页上的绿色勾号不能替代这一步。</dd></div>
+      </dl>
+      <p class="note"><strong>与前课的区别：</strong>R2 保存文件；D1 保存并查询记录；Turnstile 为接受一次请求提供依据，不负责保存文件或留言。它也不替代登录、输入校验、提交频率限制和人工内容审核。</p>
+    </section>
+    <section aria-labelledby="flow-title">
+      <p class="step">03 · 运行逻辑与分工</p><h2 id="flow-title">凭证交给谁，谁作决定？</h2>
+      <ol class="file-flow" aria-label="提交与核验流程">
+        <li><strong>1 · 访客与网页</strong><span>完成检查<br>内容 + 凭证交给 Worker</span></li>
+        <li><strong>2 · Worker</strong><span>先校验输入<br>向 Cloudflare 核验凭证</span></li>
+        <li><strong>3 · Cloudflare</strong><span>返回是否有效<br>以及来源与用途</span></li>
+        <li><strong>4 · Worker 决定</strong><span>通过才处理<br>失败则拒绝</span></li>
+      </ol>
+      <p class="note">这里 Cloudflare 的“核验凭证”服务常叫 Siteverify。Worker 的核验请求只发送凭证与后台密钥，不发送留言正文。本课收到的留言只作回显，未写入 D1、KV 或 R2；凭证也不存进这些资源。</p>
+      <dl class="timeline">
+        <div><dt>第一次提交</dt><dd>网页取得凭证，Worker 请求核验。通过后才运行处理留言的代码；Cloudflare 不会自动帮你保存留言。</dd></div>
+        <div><dt>再次提交、改文字、等待过久</dt><dd>本例每次提交后重新获取凭证。改文字也要做普通输入校验；复用已经核验的凭证或等待超过 5 分钟，会被拒绝，需要重新验证。网络失败时也先拒绝，不当作通过。</dd></div>
+      </dl>
+      <div class="division">
+        <p><strong>开发者做一次：</strong>创建组件、登记网站域名、把后台密钥放进 Worker 的秘密设置，并把“核验通过才处理”的代码接进提交入口。</p>
+        <p><strong>程序每次做：</strong>取凭证 → 随表单提交 → 后台核验 → 处理或拒绝。不会要求运营逐张管理凭证。</p>
+        <p><strong>用户或运营决定：</strong>用户填写什么；运营决定哪些入口需要防护、通过后做什么、哪些内容仍需审核。</p>
+      </div>
+    </section>
+    <section aria-labelledby="example-title">
+      <p class="step">04 · 一个真实实例</p><h2 id="example-title">只处理一次教学留言。</h2>
+      <p>这里使用你账号的真实组件与真实 Worker 核验。留言只返回给当前页面，不保存、不发给别人；请使用示例文字。</p>
+      <form id="turnstile-form">
+        <label for="lesson-message">教学留言</label>
+        <input id="lesson-message" name="title" required maxlength="200" value="我理解了：后台核验后才处理请求。">
+        <div id="turnstile-widget"></div>
+        <p id="widget-status" class="note" role="status">正在加载 Cloudflare 检查组件…</p>
+        <button id="turnstile-submit" type="submit" disabled>带凭证提交</button>
+      </form>
+      <p id="submit-status" role="status">还没有提交。网页验证与后台接受是两个阶段。</p>
+      <p class="note"><strong>观察什么？</strong>组件通过后提交，看到“Worker 核验后已处理”，才能说明前后端接通。再尝试不带凭证或重用上一张凭证，后台拒绝才证明检查发生在接口里。</p>
+      <details class="evidence"><summary>同一实例的对照检查与实际响应</summary>
+        <div class="read"><button id="submit-without-token" type="button">不带凭证提交一次</button><button id="submit-replay" type="button" disabled>重用上次成功的凭证</button></div>
+        <pre id="submit-response">等待一次实际提交。</pre>
+        <p>拒绝不带凭证说明无法靠跳过网页按钮直接进入处理阶段；拒绝复用说明每次请求需要重新核验。这里没有模拟机器人流量，也没有证明所有机器人都被拦住。</p>
+      </details>
+      <p class="state"><strong>已实现：</strong>真实组件、Worker 服务端核验、来源与用途核对、过期/复用拒绝。<strong>原模拟：</strong>演示页的任务流程仍是说明。<strong>以后扩展：</strong>登录、频率限制、D1 留言保存与内容审核。</p>
+    </section>
+    <details><summary>需要动手时再看：资源归属、代码、配置与免费范围</summary>
+      <p>组件属于 Cloudflare 账号，可用于多个登记的网站。同一个组件能共用，但每个后台仍要核对自己的来源域名与用途，不能只凭“验证成功”接受别的入口的凭证。</p>
+      <p>sitekey 是放在网页上的公开组件编号；secret 是只留在后台的核验密钥。本课通过已授权的 Cloudflare 插件直接存入 Worker 的秘密设置，密钥不进入网页或 GitHub。</p>
+      <pre>网页：内容 + token → POST /api/turnstile/submit
+Worker：secret + token → Cloudflare Siteverify
+只有 success 为真，且 hostname/action 符合预期，才继续处理。</pre>
+      <p>本例用途名是 lesson_submit；生产后台只接受 lab.aecai.us.ci 与本站 workers.dev 备用域名，不把 localhost 放进生产来源名单。组件登记允许本地开发，但本地后台应有独立设置和测试标识。</p>
+      <p>Cloudflare 管理凭证的生成、验证和有效期；你的程序管理业务内容的保存、更新、删除。删除或重配组件属于账号管理操作，不等于删除 D1 中的留言。</p>
+      <p>Turnstile Free：最多 20 个组件，每个最多 10 个主机名，挑战与验证请求不限次数；Worker 本身仍有自己的运行额度。无需先开通 R2 或付费 Workers。</p>
+      <p>浏览器需允许组件脚本和框架访问 challenges.cloudflare.com；组件加载失败时页面会说明情况。详细代码在仓库，不必先记命令才能理解这课。</p>
+      <p>核对日期：2026-10-06。<a href="https://developers.cloudflare.com/turnstile/get-started/server-side-validation/" target="_blank" rel="noopener">后台核验与凭证寿命 ↗</a> · <a href="https://developers.cloudflare.com/turnstile/plans/" target="_blank" rel="noopener">当前免费方案 ↗</a> · <a href="https://developers.cloudflare.com/turnstile/reference/content-security-policy/" target="_blank" rel="noopener">浏览器安全设置 ↗</a> · <a href="https://github.com/wm-zqbx/cloudflare-learning-lab/blob/main/src/turnstile.js" target="_blank" rel="noopener">本例后台代码 ↗</a></p>
+    </details>
+    <footer><a href="r2.html">← 上一课：R2 文件存储</a><a href="learn.html#tunnel">下一课：Tunnel →</a></footer>
+  </main>
+</body>
+</html>

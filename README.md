@@ -139,6 +139,20 @@ npx wrangler kv key put site-announcement --path docs/kv-announcement.txt --bind
 
 可用独立本地 R2 模拟验证程序读取。将主配置复制为临时配置，添加 FILES R2 绑定，再用同一个临时配置执行 r2 object put --local 与 wrangler dev --local。本地文件与云端各自独立，开发环境不是开通 R2 的替代证明。临时配置、模拟数据与日志放在被忽略的 work/ 或 .wrangler/。
 
+## Turnstile：接受提交前，先核验凭证
+
+[第 10 课](https://lab.aecai.us.ci/turnstile)先说明公开留言为什么会被自动化请求滥用，再解释网页组件、一次性凭证、后台核验，最后展示完整职责与一个回显表单。纯阅读页面通常不需要它；它不替代登录、输入校验、频率限制或内容审核。
+
+已在本账号创建 cloudflare-learning-lab-turnstile，公开 sitekey 在前端，后台密钥通过已授权的 Cloudflare 插件直接存入 cloudflare-learning-lab Worker 的 TURNSTILE_SECRET，未进入源码、聊天或本地文件。生产 TURNSTILE_HOSTNAMES 只包含本站正式与备用域名，不包含 localhost。组件登记的本地主机名只供独立本地配置使用。
+
+POST /api/turnstile/submit 在现有 Worker 中处理：输入最大 4 KiB；凭证最多 2048 字符；请求 Siteverify 后必须 success === true、hostname 属于本站、action === lesson_submit 才回显。失效、复用、来源/用途不符或网络失败均拒绝。核验请求不含留言正文，留言不保存，不写入 D1/KV/R2。原 /api/echo 仍用于输入校验课，没有声称被 Turnstile 保护。
+
+网页把取得凭证与后台接受分成两个阶段。同一实例的折叠区可以试缺少凭证与重用上次成功凭证，并展示实际响应。正式页面使用真实组件，不将官方测试密钥部署到生产；本地测试需要独立设置，页面不会将本地结果当成真实用户验证。
+
+2026-10-06 已验证：真实接口对缺少凭证与伪造无效凭证均返回 403；16 项程序测试通过，含严格成功值、来源与用途校验、失败时不处理输入。Chrome 已显示真实组件的交互检查，正常提交与真实凭证复用测试等待完成这一次人机验证。单元测试和缺少凭证的拒绝不等于完整验证成功。
+
+本次发布以线上已发布内容为基线，保留模型页与首页；GitHub 提交只包括 Turnstile 变更，工作区其他任务的改动继续保留。依据：[服务端核验](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/)、[免费方案](https://developers.cloudflare.com/turnstile/plans/)、[浏览器策略](https://developers.cloudflare.com/turnstile/reference/content-security-policy/)。
+
 ## 14 项路线
 
 1. Workers Static Assets：发布网页

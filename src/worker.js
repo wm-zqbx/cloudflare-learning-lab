@@ -1,3 +1,5 @@
+import { handleTurnstile } from './turnstile.js';
+
 const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
 });
@@ -5,6 +7,7 @@ const json = (body, status = 200) => new Response(JSON.stringify(body), {
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    if (url.pathname === '/api/turnstile/submit') return handleTurnstile(request, env);
     if (url.pathname === '/api/health') {
       if (request.method !== 'GET') return json({ error: '请使用 GET' }, 405);
       return json({ ok: true, runtime: 'Cloudflare Workers', time: new Date().toISOString(), storage: env.DB ? 'D1 已绑定；D1 课读取云端样例，原任务演示仍保存在浏览器' : '未接入数据库；演示数据只在浏览器中保存' });

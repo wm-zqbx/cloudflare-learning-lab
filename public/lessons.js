@@ -184,18 +184,19 @@ window.LESSONS = [
     "id": "turnstile",
     "name": "Turnstile",
     "group": "安全与远程",
-    "headline": "在提交前验证请求来自正常访客",
-    "scene": "公开留言接口受到机器人反复提交，需要在写入 D1 前加一道验证。",
-    "role": "前端组件生成 token → 前端连同表单提交 → Worker 使用 secret 调用 Siteverify → 验证通过才写数据。",
-    "quota": "Free 最多 20 个组件，每个 10 个主机名；验证请求不限次数。",
+    "headline": "后台核验凭证后，再决定是否处理提交",
+    "scene": "公开留言接口被自动化请求滥用。网页按钮不能保护后台入口；纯阅读网页通常不需要 Turnstile。",
+    "role": "turnstile.html 先讲问题、网页组件/一次凭证/后台核验，再展示网页、Worker 与 Cloudflare 的分工。真实教学提交只回显，不保存留言。",
+    "quota": "Free 最多 20 个组件，每个 10 个主机名；验证请求不限次数，Worker 仍有自身额度。",
     "steps": [
-      "在 Turnstile 创建组件，配置实际域名。sitekey 放前端，secret 用 npx wrangler secret put TURNSTILE_SECRET 保存。",
-      "前端将 cf-turnstile-response token 和表单一起提交；按官方说明加载组件并更新 CSP。",
-      "Worker 必须在服务端 Siteverify。检查 success、预期 hostname 和 action，验证失败就拒绝写入。"
+      "先打开 turnstile.html，理解为什么网页的绿色勾号还不够。",
+      "组件已在本账号创建；公开编号在网页，后台密钥在 Worker 秘密设置，未进入 GitHub。",
+      "提交入口核对有效结果、本站 hostname 和 lesson_submit 用途，通过后才处理输入。",
+      "凭证只能核验一次，5 分钟后过期；每次提交后网页重新取凭证。"
     ],
-    "code": "// 教学片段：token 来自提交的表单\nconst result = await fetch(\n  \"https://challenges.cloudflare.com/turnstile/v0/siteverify\",\n  { method: \"POST\", body: new URLSearchParams({\n    secret: env.TURNSTILE_SECRET, response: token\n  }) }\n);\nconst validation = await result.json();\nif (!validation.success) return new Response(\"验证失败\", { status: 403 });\n// 接下来还应核对 hostname / action，再保存数据",
-    "verify": "正常用户能提交，缺少或重复使用 token 的请求被拒绝。本站按钮只是流程示意，不生成真实 token。",
-    "pitfall": "仅在前端显示绿色勾号不等于安全。token 有有效期且只可验证一次。Turnstile 不能替代用户登录或全部限流策略。",
+    "code": "// Worker 中向 Siteverify 核验 token\n// 必须 success === true 且 hostname/action 符合预期\n// 通过后才处理业务输入；本课不写数据库",
+    "verify": "正常提交需通过真实组件和服务端核验；同一表单可对照缺少凭证与复用凭证的拒绝。实际验证结果见 README，不把单元测试当作真实人机验证成功。",
+    "pitfall": "不是用户登录、数据库或完整反滥用方案。网页组件不自动保护接口；程序必须在后台验证。原任务演示的流程仍是模拟说明。",
     "doc": "https://developers.cloudflare.com/turnstile/get-started/server-side-validation/"
   },
   {
