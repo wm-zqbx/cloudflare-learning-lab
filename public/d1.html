@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>D1：让数据留下来</title>
+  <link rel="stylesheet" href="d1.css">
+  <script defer src="d1.js"></script>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <header><a href="index.html">Cloudflare 学习站</a><span>第 7 课 · D1</span></header>
+  <main>
+    <h1>让数据留下来。</h1>
+    <p class="intro">D1 是 Cloudflare 托管的数据库。<br>把任务等数据存进云端的表，网页关闭后，数据仍然存在。</p>
+    <div class="roles" aria-label="数据读取过程">
+      <div><strong>网页</strong><span>展示数据</span></div><b aria-hidden="true">→</b>
+      <div><strong>Worker</strong><span>查询数据</span></div><b aria-hidden="true">→</b>
+      <div><strong>D1</strong><span>保存数据</span></div>
+    </div>
+    <section aria-labelledby="table-title">
+      <h2 id="table-title">一张表，一条记录。</h2>
+      <p>一行是一条任务，一列是一个字段。</p>
+      <table><thead><tr><th scope="col">编号</th><th scope="col">任务标题</th></tr></thead><tbody id="d1-task"><tr><td colspan="2">正在读取云端记录…</td></tr></tbody></table>
+      <div class="read"><button id="d1-read" type="button">从云端重新读取</button><span id="d1-status" role="status">连接 D1…</span></div>
+      <p class="try">试着刷新页面，或用另一台设备打开这个网址。<br>读到的是同一条云端记录，网页本身没有保存它。</p>
+    </section>
+    <p class="essence"><strong>记住这句话：</strong>Worker 做事，D1 记住结果。</p>
+    <details>
+      <summary>想知道这条数据是怎么写入、读出的？</summary>
+      <p>这条样例已从管理端写入真实 D1。网页只读它；应用要新增或修改记录，也是让 Worker 执行 SQL。</p>
+      <p><strong>SQL</strong> 是操作表的语言。这两句分别是“保存一条任务”和“查出这条任务”： </p>
+      <pre>INSERT INTO tasks (id, title)
+VALUES ('1', '理解 D1 如何保存数据');
+
+SELECT id, title FROM tasks WHERE id = '1';</pre>
+      <p>实际 Worker 使用 DB 绑定和参数化查询；接口返回 no-store，每次读取都查询数据库。此页没有使用 localStorage，也没有把任务写死在网页里。</p>
+      <p>以前的回显接口只处理输入、返回 saved:false。D1 提供存储，但代码必须执行写入操作，数据才会被保存。</p>
+      <p><a href="https://github.com/wm-zqbx/cloudflare-learning-lab/blob/main/src/worker.js" target="_blank" rel="noopener">查看这次的后端代码 ↗</a> · <a href="https://developers.cloudflare.com/d1/" target="_blank" rel="noopener">D1 官方说明 ↗</a></p>
+    </details>
+    <footer><a href="worker.html">← 上一课：Worker 处理请求</a><a href="learn.html#kv">下一课：KV →</a></footer>
+  </main>
+</body>
+</html>

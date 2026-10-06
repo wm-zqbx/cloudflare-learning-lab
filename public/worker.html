@@ -57,7 +57,7 @@ export default {
       <p class="fine">两个 fetch 含义不同：浏览器里的 fetch() 是发起网络请求；Worker 导出的 fetch handler 是收到请求时的入口。配置里的绑定让 Worker 访问资源，不能把 API 密钥放到 public/ 的浏览器代码中。</p>
       <div class="actions"><a class="button secondary" href="https://github.com/wm-zqbx/cloudflare-learning-lab/blob/main/src/worker.js" target="_blank" rel="noopener">阅读完整后端源码 ↗</a><a class="button secondary" href="https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/" target="_blank" rel="noopener">官方 fetch handler 文档 ↗</a></div>
     </section>
-    <section class="notice"><b>这次为什么返回 saved: false？</b><p>Worker 已经处理和校验请求，但没有连接数据库。刷新后要在云端找回任务、让其他设备看到同一条任务，下一课需要 D1。模块级数组不能充当持久数据库。</p><a href="learn.html#d1">下一课：D1 保存任务 →</a></section>
+    <section class="notice"><b>这次为什么返回 saved: false？</b><p>回显接口只处理和校验请求，不执行数据库写入。D1 课已连接真实数据库，展示一条云端记录。模块级数组不能充当持久数据库。</p><a href="d1.html">下一课：D1 保存数据 →</a></section>
   </main>
   <footer><span>Cloudflare Lab · Workers 请求实验</span><span>额度核对：2026-10-05 · 以官方文档为准</span></footer>
 </body>

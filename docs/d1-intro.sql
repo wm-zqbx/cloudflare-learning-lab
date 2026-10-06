@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS tasks (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL CHECK(length(title) BETWEEN 1 AND 200),
+  done INTEGER NOT NULL DEFAULT 0 CHECK(done IN (0, 1)),
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+INSERT OR IGNORE INTO tasks (id, title)
+VALUES ('1', '理解 D1 如何保存数据');

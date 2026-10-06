@@ -86,7 +86,7 @@ window.LESSONS = [
     "quota": "所有计划可使用 Web Analytics；不等于无限保存所有原始事件。",
     "steps": [
       "本次已在账户 Web Analytics 创建 lab.aecai.us.ci 站点，选择手动 JS 接入（auto_install:false）。公开的 beacon token 是站点标识，不是具有管理权限的 API Token。",
-      "四个主要 HTML 页面加载 public/analytics.js。脚本只在 lab.aecai.us.ci 加载一次官方 beacon；本地开发和 workers.dev 备用域名不采集。以后新建 HTML 页面时也要添加这段引用。",
+      "各个主要 HTML 页面加载 public/analytics.js。脚本只在 lab.aecai.us.ci 加载一次官方 beacon；本地开发和 workers.dev 备用域名不采集。以后新建 HTML 页面时也要添加这段引用。",
       "在 public/_headers 的 CSP 中允许 static.cloudflareinsights.com 加载脚本，允许 cloudflareinsights.com 发送数据。没有移除 CSP，也没有允许任意第三方脚本。",
       "导航请求实测发现边缘会注入另一枚统计标识。本项目给主要 HTML 页及其规范路径设置 Cache-Control 的 no-transform，阻止额外注入，只保留自己的手动安装；版本文件的一年缓存策略不变。脚本检测到不同标识时会提示冲突，而不会静默跳过。",
       "分别打开首页、课程页和演示页。稍后进入账户 Web Analytics，选择本站与最近的时间范围，查看 Page views、Visits、页面路径和来源。页面加载完成时及离开页面时会报告数据。",
@@ -94,7 +94,7 @@ window.LESSONS = [
       "LCP 看主要内容出现速度，INP 看操作后响应是否及时，CLS 看布局是否跳动。刚开通或样本少时，部分指标可能为空；性能数据还可能在离开页面后上报。",
       "本项目课程用 #hash 切换章节，它仍是同一个 HTML 页面；不能用页面浏览量精确推断每节课的点击或学习完成率。需要业务事件时另做方案。本次没有发送表单里的任务或笔记。"
     ],
-    "code": "<!-- 本项目四个主要 HTML 页面中的实际引用 -->\n<script defer src=\"analytics.js\"></script>\n\n// public/analytics.js 的核心逻辑\nif (location.hostname === \"lab.aecai.us.ci\") {\n  const script = document.createElement(\"script\");\n  script.type = \"module\";\n  script.src = \"https://static.cloudflareinsights.com/beacon.min.js\";\n  script.dataset.cfBeacon = JSON.stringify({\n    token: \"29a3c522775b43658ab100b05147536c\"\n  });\n  document.body.append(script);\n}\n\n# public/_headers：只增加指定的官方域名\nscript-src 'self' https://static.cloudflareinsights.com;\nconnect-src 'self' https://cloudflareinsights.com;\n\n# HTML 手动安装时防止额外自动注入，保留校验策略\n/lab\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n# 其他 HTML 页及 .html 路径也配置相同策略",
+    "code": "<!-- 本项目各个主要 HTML 页面中的实际引用 -->\n<script defer src=\"analytics.js\"></script>\n\n// public/analytics.js 的核心逻辑\nif (location.hostname === \"lab.aecai.us.ci\") {\n  const script = document.createElement(\"script\");\n  script.type = \"module\";\n  script.src = \"https://static.cloudflareinsights.com/beacon.min.js\";\n  script.dataset.cfBeacon = JSON.stringify({\n    token: \"29a3c522775b43658ab100b05147536c\"\n  });\n  document.body.append(script);\n}\n\n# public/_headers：只增加指定的官方域名\nscript-src 'self' https://static.cloudflareinsights.com;\nconnect-src 'self' https://cloudflareinsights.com;\n\n# HTML 手动安装时防止额外自动注入，保留校验策略\n/lab\n  Cache-Control: public, max-age=0, must-revalidate, no-transform\n# 其他 HTML 页及 .html 路径也配置相同策略",
     "verify": "演示页显示统计脚本是否加载。浏览器 Network 应看到 beacon.min.js 及向 cloudflareinsights.com/cdn-cgi/rum 的 POST。后台出现本站的实际页面数据才证明汇总成功；加载提示本身不能证明入库。不要直接用 curl 制造统计事件。",
     "pitfall": "只选一种安装方式，避免重复安装。浏览器拦截器、网络或 CSP 可能影响采集，控制台也有汇总延迟。访问量不是独立人数，Web Analytics 不是任务数据库，也不是完整行为录屏或所有业务事件分析。",
     "doc": "https://developers.cloudflare.com/web-analytics/get-started/"
@@ -114,7 +114,7 @@ window.LESSONS = [
       "阅读 public/workers.js：浏览器 fetch() 是发起请求。阅读 src/worker.js：导出的 fetch(request, env) 是处理请求的入口。request 包含本次请求；env 提供配置好的资源绑定。",
       "阅读 wrangler.jsonc：main 指向 src/worker.js；run_worker_first 只包含 /api/*。因此网页文件由 Static Assets 直接返回，接口运行后端代码。不要为了接口把所有静态路径都改成先执行 Worker。",
       "在自己的电脑运行 npm run dev 并验证，再运行 npm run check、npm run build 和 npm run deploy。GitHub 保存版本，当前本地 Wrangler 负责发布；自动部署另按 GitHub 课程配置。",
-      "处理成功不等于持久保存：当前 saved:false 是真实状态。下一课通过 D1 保存任务。模块级变量不会可靠地在所有请求和地区间共享，也不能当作持久数据库。",
+      "处理成功不等于持久保存：回显接口的 saved:false 仍为真实状态。D1 课已连接真实数据库，展示云端样例。模块级变量不会可靠地在所有请求和地区间共享，也不能当作持久数据库。",
       "调用外部服务时，把管理密钥保存为 Worker Secret，在后端使用。公开的浏览器代码不能保存秘密；输入校验也不等于已经完成身份验证或防滥用。"
     ],
     "code": "// 浏览器：发起请求（public/workers.js）\nconst response = await fetch(\"/api/echo\", {\n  method: \"POST\",\n  headers: { \"Content-Type\": \"application/json\" },\n  body: JSON.stringify({ title: \"  准备项目资料  \" })\n});\nconsole.log(response.status, await response.json());\n\n// 后端入口结构示意：完整校验见 src/worker.js\nexport default {\n  async fetch(request, env) {\n    // request：本次传入请求\n    // env：配置的 ASSETS / DB / KV 等绑定\n    // 先检查路径、方法、大小和字段，再返回响应\n    return Response.json({ saved: false });\n  }\n};\n\n// 本项目响应内容示例\n{ \"title\": \"准备项目资料\", \"processedBy\": \"Worker fetch handler\",\n  \"saved\": false, \"explanation\": \"接口已处理请求。持久化需要接入 D1。\" }",
@@ -126,18 +126,20 @@ window.LESSONS = [
     "id": "d1",
     "name": "D1",
     "group": "开发应用",
-    "headline": "让任务刷新后仍存在云端",
-    "scene": "多个同事需要看到同一份任务，而不是各自浏览器的一份副本。",
-    "role": "Worker 用 DB 绑定执行参数化 SQL。任务标题等结构化数据放 D1，附件本体放 R2。演示页当前使用 localStorage，不是 D1。",
+    "headline": "把结构化数据保存在云端的表里",
+    "scene": "任务要在关闭网页后仍存在，并让不同设备读取同一份记录。打开 d1.html，只看一条真实云端任务和重新读取按钮。",
+    "role": "网页展示，Worker 查询，D1 保存。一行是一条记录，一列是一个字段。D1 是托管的 SQL 数据库；它不会自动保存网页输入，必须执行写入操作。",
     "quota": "免费总计 5GB，单库最大 500MB；每天读 500 万行、写 10 万行。计量是扫描和写入的行数，不是 SQL 次数。",
     "steps": [
-      "创建数据库：npx wrangler d1 create learning-tasks，把返回的绑定配置加入 wrangler.jsonc。",
-      "本地建表：npx wrangler d1 execute learning-tasks --local --file=docs/schema.sql。远端初始化时改用 --remote。",
-      "新增 Worker 路由并用 env.DB 访问。写入接口要做身份或 Turnstile 校验，然后将前端切换到远端接口。"
+      "已创建 cloudflare-learning-lab-d1 数据库，在 tasks 表写入编号为 1 的公开样例，并用 DB 绑定连接 Worker。",
+      "打开 d1.html：/api/d1/task 通过 Worker 读取 D1；页面不会把任务写死，也没有使用 localStorage。",
+      "点击重新读取或刷新页面；从另一台设备也能读到相同的云端记录。配置与 SQL 放在折叠说明里。",
+      "本次网页只读固定样例；原任务列表仍是本地演示。应用新增、修改任务，需要另外实现经过身份和输入校验的写入接口。",
+      "本地开发先执行 npx wrangler d1 execute cloudflare-learning-lab-d1 --local --file=docs/d1-intro.sql。本地数据库和远端是两份独立数据。"
     ],
-    "code": "// 教学片段：先配置 DB 绑定，再放到 Worker handler 中\nconst title = \"准备项目资料\";\nawait env.DB.prepare(\n  \"INSERT INTO tasks (id, title) VALUES (?, ?)\"\n).bind(crypto.randomUUID(), title).run();\n\nconst { results } = await env.DB.prepare(\n  \"SELECT id, title, done FROM tasks ORDER BY created_at DESC LIMIT 20\"\n).all();",
-    "verify": "从两台设备访问相同接口，看到同一条任务；用 D1 控制台检查记录。观察 meta 中读写行数。",
-    "pitfall": "本地与远端数据库是两个环境。不要拼接用户输入成 SQL。5GB 是账户总额，不是一个免费库的上限。",
+    "code": "// src/worker.js：读取一条公开样例\nconst task = await env.DB.prepare(\n  \"SELECT id, title FROM tasks WHERE id = ?1 LIMIT 1\"\n).bind(\"1\").first();\n\n// wrangler.jsonc 已配置 DB 绑定\n// 本地初始化\nnpx wrangler d1 execute cloudflare-learning-lab-d1 --local --file=docs/d1-intro.sql\n\n// 管理端写入示例，网页不提供公开写入接口\nINSERT INTO tasks (id, title) VALUES ('1', '理解 D1 如何保存数据');",
+    "verify": "网页通过真实 Worker 读取 D1，刷新后仍读取同一条记录。可在 D1 控制台查询编号 1，核对标题。接口失败时页面报告错误，不用浏览器数据假装成功。",
+    "pitfall": "绑定数据库不等于所有接口都会保存。echo 仍是回显，原任务列表仍用 localStorage；本页的记录来自真实 D1。数据库表不是文件桶；附件本体以后放 R2。",
     "doc": "https://developers.cloudflare.com/d1/platform/pricing/"
   },
   {

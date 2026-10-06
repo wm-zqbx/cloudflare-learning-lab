@@ -20,3 +20,18 @@ test('unknown APIs and methods fail rather than serving a page',async()=>{
   assert.equal((await call('/api/echo')).status,405);
   assert.equal((await call('/index.html')).status,200);
 });
+test('D1 lesson reads the bound database record and keeps the response uncached', async () => {
+  const record = { id:'1', title:'来自测试数据库的记录' };
+  const DB = { prepare:() => ({ bind:() => ({ first:async () => record }) }) };
+  const response = await worker.fetch(new Request('https://example.com/api/d1/task'), { DB });
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await response.json(), { source:'D1', task:record });
+});
+test('D1 lesson cannot pretend to read without a database or accept public writes', async () => {
+  assert.equal((await call('/api/d1/task')).status, 503);
+  assert.equal((await call('/api/d1/task', {method:'POST'})).status, 405);
+  const DB = { prepare:() => ({ bind:() => ({ first:async () => null }) }) };
+  const response = await worker.fetch(new Request('https://example.com/api/d1/task'), { DB });
+  assert.equal(response.status, 404);
+});

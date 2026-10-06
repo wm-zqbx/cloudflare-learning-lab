@@ -2,6 +2,7 @@
   'use strict';
   const $ = selector => document.querySelector(selector);
   const lessons = window.LESSONS;
+  const lessonHref = id => id === 'd1' ? 'd1.html' : 'learn.html#' + id;
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
   const store = {
     get(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } },
@@ -11,7 +12,7 @@
   $(`[data-nav="${document.body.dataset.page}"]`)?.classList.add('active');
   const completedRaw = store.get('cf-lab-progress', []);
   const completed = new Set(Array.isArray(completedRaw) ? completedRaw : []);
-  if ($('#feature-grid')) $('#feature-grid').innerHTML = lessons.map((item, index) => `<a class="feature-card" href="learn.html#${item.id}"><div class="card-top"><span>${String(index + 1).padStart(2,'0')} / ${escape(item.group)}</span><span>${completed.has(item.id) ? '已学 ✓' : '↗'}</span></div><h3>${escape(item.name)}</h3><p>${escape(item.headline)}</p></a>`).join('');
+  if ($('#feature-grid')) $('#feature-grid').innerHTML = lessons.map((item, index) => `<a class="feature-card" href="${lessonHref(item.id)}"><div class="card-top"><span>${String(index + 1).padStart(2,'0')} / ${escape(item.group)}</span><span>${completed.has(item.id) ? '已学 ✓' : '↗'}</span></div><h3>${escape(item.name)}</h3><p>${escape(item.headline)}</p></a>`).join('');
 
   const githubContent = `<p class="eyebrow">WORKFLOW / 代码与发布</p><h1>GitHub × Cloudflare</h1><p class="lead">GitHub 保存源码和历史，Cloudflare 运行网页与 Worker。每次修改都能追溯、检查和重新部署。</p><section><h2>推荐方式：Workers Builds</h2><ol><li>打开本项目公开仓库，先阅读 README，再克隆到自己的电脑。</li><li>在 Cloudflare Workers 中选择连接 Git 仓库，授权访问这个仓库并选择 main 分支。实际授权由你在控制台完成。</li><li>本项目没有前端编译步骤；部署命令使用 <code>npx wrangler deploy</code>。Wrangler 会上传 public/ 并发布 src/worker.js。</li><li>提交并推送修改，Cloudflare 执行构建与部署。打开部署 URL，检查网页内容与 /api/health。</li></ol></section><section><h2>备用方式：GitHub Actions</h2><p>仓库的 check.yml 在提交或 PR 时运行检查。deploy.yml 只在你手动运行时部署，不会因为推送自动消耗云端资源。</p><ol><li>给 GitHub 仓库添加 Secret：CLOUDFLARE_API_TOKEN；给它最小所需 Workers 部署权限。</li><li>添加变量 CLOUDFLARE_ACCOUNT_ID。账户 ID 是配置，不是访问密钥。</li><li>在 Actions 中选 Deploy to Cloudflare，再点 Run workflow。查看执行结果与部署地址。</li></ol><p>Workers Builds 和 Actions 部署选择一个即可，避免同一次提交重复部署。当前这两种云端部署尚未配置。</p></section><section><h2>本地修改与发布</h2><div class="lesson-code"><button class="copy" type="button">复制</button><pre>git clone https://github.com/wm-zqbx/cloudflare-learning-lab.git\ncd cloudflare-learning-lab\nnpm ci\nnpm run dev\n\n# 修改 public/ 中的文件后\nnpm run check\nnpm run build\ngit add public/\ngit commit -m "Update learning page"\ngit push\n\n# 手动从本地部署：先登录，再发布\nnpx wrangler login\nnpm run deploy</pre></div></section><section class="verify"><h2>如何确认部署成功</h2><p>检查 GitHub 提交记录、CI 结果、Cloudflare 部署日志，再打开实际网址。仅仅 push 成功，不能说明网站已上线。</p></section><section class="pitfall"><h2>公开仓库放什么</h2><p>提交源码、配置、SQL、README 和锁文件。API Token、.dev.vars、.env、私人附件不提交。不要把云端数据库或本地演示内容误当作 GitHub 会自动保存的数据。</p></section><div class="lesson-bottom"><a href="https://developers.cloudflare.com/workers/ci-cd/builds/" target="_blank" rel="noopener">Workers Builds 官方文档 ↗</a><a href="lab.html">返回项目演示 →</a></div>`;
   function renderNav(query = '') {
@@ -20,12 +21,13 @@
       if (!`${item.name} ${item.headline} ${item.scene}`.toLowerCase().includes(query.toLowerCase())) return '';
       const group = item.group !== lastGroup ? `<p class="nav-group">${escape(item.group)}</p>` : '';
       lastGroup = item.group;
-      return `${group}<a class="lesson-link ${(location.hash.slice(1) || 'assets') === item.id ? 'active' : ''}" href="#${item.id}"><span>${String(index + 1).padStart(2,'0')}</span>${escape(item.name)}${completed.has(item.id) ? ' ✓' : ''}</a>`;
+      return `${group}<a class="lesson-link ${(location.hash.slice(1) || 'assets') === item.id ? 'active' : ''}" href="${item.id === 'd1' ? 'd1.html' : '#' + item.id}"><span>${String(index + 1).padStart(2,'0')}</span>${escape(item.name)}${completed.has(item.id) ? ' ✓' : ''}</a>`;
     }).join('');
     if (!$('#lesson-nav').innerHTML) $('#lesson-nav').textContent = '没有匹配的课程。';
   }
   function renderLesson() {
     const id = location.hash.slice(1) || 'assets';
+    if (id === 'd1') { location.replace('d1.html'); return; }
     const index = lessons.findIndex(item => item.id === id);
     const item = lessons[index];
     renderNav($('#search').value);
@@ -50,7 +52,7 @@
     function renderTasks() {
       $('#tasks').innerHTML = tasks.length ? tasks.map(task => `<li class="${task.done ? 'done' : ''}"><input type="checkbox" data-task="${escape(task.id)}" ${task.done ? 'checked' : ''} aria-label="完成 ${escape(task.title)}"><span class="task-text">${escape(task.title)}</span><button class="remove" data-remove="${escape(task.id)}" aria-label="删除 ${escape(task.title)}">删除</button></li>`).join('') : '<li class="muted">还没有任务，添加一条试试看。</li>';
     }
-    function trace(steps) { $('#trace').innerHTML = steps.map(([title,body,id]) => `<div class="flow-step"><b>${escape(title)}</b><p>${escape(body)}</p>${id ? `<a href="learn.html#${id}">查看接入方法 →</a>` : ''}</div>`).join(''); }
+    function trace(steps) { $('#trace').innerHTML = steps.map(([title,body,id]) => `<div class="flow-step"><b>${escape(title)}</b><p>${escape(body)}</p>${id ? `<a href="${lessonHref(id)}">查看接入方法 →</a>` : ''}</div>`).join(''); }
     $('#task-form').addEventListener('submit', event => {
       event.preventDefault();
       const title = $('#task-title').value.trim();

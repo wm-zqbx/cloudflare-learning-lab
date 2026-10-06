@@ -5,6 +5,13 @@
   "compatibility_date": "2026-10-05",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "cloudflare-learning-lab-d1",
+      "database_id": "cd951628-cec6-44a5-80ad-0dcbe711b532"
+    }
+  ],
   "routes": [
     { "pattern": "lab.aecai.us.ci", "custom_domain": true }
   ],

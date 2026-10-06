@@ -40,15 +40,16 @@ npm run dev
 | `/learn.html#github` | GitHub 与 Cloudflare 联用流程 |
 | `/lab.html` | 任务、附件、笔记和访问策略演示 |
 | `/worker.html` | 请求与响应对照、7 项真实后端校验实验 |
+| `/d1` | 表、记录与云端保存，一条真实 D1 样例 |
 
 也可以双击 `public/index.html` 阅读教程和进行本地演示；真实 Worker API 需要通过 Wrangler 开发服务器或云端部署访问。
 
 ## 实现状态
 
-- 已实现：静态网页、自定义域名与 HTTPS、Web Analytics、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
-- 真正可执行的 Worker：`GET /api/health`、`POST /api/echo`。回显接口限制 4 KiB、校验字段，不保存数据。
+- 已实现：静态网页、自定义域名与 HTTPS、Web Analytics、D1 云端只读样例、14 节课程、搜索、学习进度、任务新增/完成/删除、文件元信息查看、文本摘要流程示意、Access 策略模拟。
+- 真正可执行的 Worker：`GET /api/health`、`POST /api/echo`、`GET /api/d1/task`。回显接口限制 4 KiB、校验字段，不保存数据；D1 接口读取云端样例。
 - **浏览器任务仅保存在 localStorage；附件不上传；摘要不调用 AI；身份选择不是认证。**
-- 未创建云端 D1、KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
+- 未创建云端 KV、R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
 - 当前仓库有 CI 检查与手动部署 workflow。创建仓库不等于已经部署 Cloudflare。
 
 ## CDN 与缓存实战
@@ -67,7 +68,7 @@ npm run dev
 
 ## Web Analytics 实战
 
-已创建 lab.aecai.us.ci 统计站点并选择手动 JS 安装。四个主要 HTML 页面通过 public/analytics.js 加载官方 beacon，CSP 仅增加所需的脚本与数据上报域名。脚本限制在正式域名运行，localhost 和 workers.dev 不采集；公开 beacon token 是站点标识，不能作为账户管理凭证。
+已创建 lab.aecai.us.ci 统计站点并选择手动 JS 安装。各个主要 HTML 页面通过 public/analytics.js 加载官方 beacon，CSP 仅增加所需的脚本与数据上报域名。脚本限制在正式域名运行，localhost 和 workers.dev 不采集；公开 beacon token 是站点标识，不能作为账户管理凭证。
 
 [进入本站统计后台](https://dash.cloudflare.com/0611ef22eaeaf6496cc593583aa4e87d/web-analytics/overview?siteTag~in=70093ed0b15c42d287d1764cec76b576&excludeBots=Yes)（需登录你自己的 Cloudflare 账户）。[演示说明](https://lab.aecai.us.ci/lab#analytics-lab)、[第 5 课](https://lab.aecai.us.ci/learn#analytics)。
 
@@ -83,9 +84,19 @@ Page views 看页面浏览，Visits 按来源识别访问开始，不是独立�
 
 正常标题返回 200；空白标题和损坏 JSON 返回 400；错误方法返回 405；错误类型返回 415；超过应用的 4 KiB 限制返回 413；不存在的 API 返回 404。判断还核对 JSON 格式、no-store 和返回内容，不把错误输入遭到拒绝误认为实验失败。
 
-public/workers.js 在浏览器发起网络请求，src/worker.js 在 Cloudflare 收到请求后执行校验。后端未新增数据库或存储，响应中的 saved:false 仍为真实状态。页面引用 analytics.js；HTML 规范路径保留 no-transform 避免额外统计注入。
+public/workers.js 在浏览器发起网络请求，src/worker.js 在 Cloudflare 收到请求后执行校验。回显接口不写数据库，响应中的 saved:false 仍为真实状态。页面引用 analytics.js；HTML 规范路径保留 no-transform 避免额外统计注入。
 
 [第 6 课](https://lab.aecai.us.ci/learn#workers)、[后端入口官方说明](https://developers.cloudflare.com/workers/runtime-apis/handlers/fetch/)。Free 当前每天 10 万次 Worker 请求、每次 10ms CPU；等待网络不计入 CPU 时间，见 [官方额度](https://developers.cloudflare.com/workers/platform/limits/)。
+
+## D1：只看核心概念
+
+[简洁的第 7 课](https://lab.aecai.us.ci/d1)只展示“表、记录、云端保存”：一条真实任务记录和一个重新读取按钮。SQL 与接入说明折叠，旧 learn#d1 入口会转到这页。
+
+已创建 cloudflare-learning-lab-d1，将 docs/d1-intro.sql 的公开样例写入远端数据库。Worker 用 DB 绑定读取编号 1 的 id/title；接口 /api/d1/task 使用固定参数，只允许 GET，并返回 no-store。页面不使用 localStorage，也不内置样例标题。
+
+原任务演示仍保存在浏览器；echo 仍不写数据库。这次公开页面只读一条学习样例，其他记录不会被该接口列出。新增或修改任务需另做经过权限校验的写入接口。先区分“Worker 处理请求”和“D1 持久保存”，再学习完整 CRUD。
+
+本地初始化（独立于远端）：npx wrangler d1 execute cloudflare-learning-lab-d1 --local --file=docs/d1-intro.sql，然后 npm run dev。远端已初始化，重复部署不会重新插入或覆盖记录。
 
 ## 14 项路线
 
@@ -130,8 +141,9 @@ npm run deploy
 - `public/app.js`：页面与本地演示逻辑
 - `public/cache.js`、`public/cache-demo/`：真实缓存观察和版本文件
 - `src/worker.js`：真实 Worker 接口
-- `wrangler.jsonc`：Cloudflare 配置，无云端资源绑定或密钥
-- `docs/schema.sql`：后续 D1 实验的表结构
+- `wrangler.jsonc`：Cloudflare 配置，含 D1 绑定，无密钥
+- `docs/d1-intro.sql`：D1 第一课的建表与样例初始化
+- `docs/schema.sql`：完整任务和附件表结构，供后续扩展参考
 - `.github/workflows/`：检查与手动部署
 - `tests/worker.test.js`：请求验证与路由检查
 
