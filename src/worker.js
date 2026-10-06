@@ -22,6 +22,20 @@ export default {
         return json({ error: '暂时无法读取数据库，请稍后重试' }, 500);
       }
     }
+    if (url.pathname === '/api/kv/announcement') {
+      if (request.method !== 'GET') return json({ error: '此样例只接受 GET 读取' }, 405);
+      if (!env.CONFIG) return json({ error: 'KV 尚未配置' }, 503);
+      try {
+        // Read only this public configuration key, never a key supplied by a visitor.
+        const key = 'site-announcement';
+        const value = await env.CONFIG.get(key);
+        if (value === null) return json({ error: '云端公告尚未写入' }, 404);
+        return json({ source: 'KV', key, value });
+      } catch {
+        console.error(JSON.stringify({ event: 'kv_read_failed' }));
+        return json({ error: '暂时无法读取公告，请稍后重试' }, 500);
+      }
+    }
     if (url.pathname === '/api/echo') {
       if (request.method !== 'POST') return json({ error: '请使用 POST' }, 405);
       if (!request.headers.get('content-type')?.includes('application/json')) return json({ error: '请提交 application/json' }, 415);

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>KV：给名字，取内容</title>
+  <link rel="stylesheet" href="d1.css">
+  <link rel="stylesheet" href="kv.css">
+  <script defer src="kv.js"></script>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <header><a href="index.html">Cloudflare 学习站</a><span>第 8 课 · KV</span></header>
+  <main>
+    <h1>给名字，取内容。</h1>
+    <p class="intro">KV 是云端的“键 → 值”存储。<br>键是查找用的名字，值是这个名字对应的内容。</p>
+    <section aria-labelledby="example-title">
+      <h2 id="example-title">一条真实的网站公告。</h2>
+      <p>网页让 Worker 拿着这个键，去 KV 取出公告。</p>
+      <div class="pair">
+        <div><span>键 Key · 查找的名字</span><code>site-announcement</code></div>
+        <b aria-hidden="true">↓</b>
+        <div><span>值 Value · 对应的内容</span><p id="kv-value">正在读取云端公告…</p></div>
+      </div>
+      <div class="read"><button id="kv-read" type="button">从 KV 重新读取</button><span id="kv-status" role="status">连接 KV…</span></div>
+      <p class="try">工作中：运营在 KV 修改公告，网页随后读出新文字，无需重新发布网页。</p>
+    </section>
+    <p class="essence"><strong>记住：</strong>用键找值，适合“读得多、改得少”。</p>
+    <p class="caveat">更新有传播延迟：其他地区可能 60 秒或更久才读到新值。<br>公告能等一会儿；库存扣减、余额变更需要更强的一致性。</p>
+    <details>
+      <summary>与 D1 有什么区别？怎样改这条公告？</summary>
+      <table><thead><tr><th scope="col">需求</th><th scope="col">常用选择</th></tr></thead><tbody><tr><td>用名字取公告、配置或短链接目标</td><td>KV：按键取值</td></tr><tr><td>存一组任务，筛选未完成的记录</td><td>D1：表与 SQL 查询</td></tr></tbody></table>
+      <p>本页公告已写入真实 KV。公开页面只读；修改使用你自己的 Cloudflare 管理权限。</p>
+      <p>在本项目目录运行下面命令，修改远端公告，再点“从 KV 重新读取”。修改传播可能需要等待，无需重新部署：</p>
+      <pre>npx wrangler kv key put site-announcement "今晚 8 点学习 R2" --binding CONFIG --remote</pre>
+      <p>Worker 的核心读取只有一句：</p>
+      <pre>const announcement = await env.CONFIG.get('site-announcement');</pre>
+      <p>CONFIG 是 Worker 连接的 KV 命名空间，可以理解为存放这组键值的容器。键不存在时，get 返回 null。</p>
+      <p>每次点击都会请求 Worker 并调用 KV 绑定；no-store 只阻止浏览器缓存接口，不会绕过 KV 自身的缓存和传播延迟。</p>
+      <p>Free 额度：1 GB 存储；每天读 10 万次，写、删除、列表操作各 1,000 次。超过免费额度，相应操作会失败。</p>
+      <p><a href="https://developers.cloudflare.com/kv/concepts/how-kv-works/" target="_blank" rel="noopener">KV 工作原理 ↗</a> · <a href="https://developers.cloudflare.com/kv/platform/pricing/" target="_blank" rel="noopener">免费额度 ↗</a> · <a href="https://github.com/wm-zqbx/cloudflare-learning-lab/blob/main/src/worker.js" target="_blank" rel="noopener">后端代码 ↗</a></p>
+    </details>
+    <footer><a href="d1.html">← 上一课：D1 保存记录</a><a href="learn.html#r2">下一课：R2 →</a></footer>
+  </main>
+</body>
+</html>

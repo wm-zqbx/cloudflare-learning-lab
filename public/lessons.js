@@ -147,17 +147,19 @@ window.LESSONS = [
     "name": "Workers KV",
     "group": "开发应用",
     "headline": "保存读得多、改得少的配置",
-    "scene": "资料站首页要显示项目介绍，或者把 /s/guide 短链接映射到完整教程地址。",
-    "role": "Worker 用 KV 读取配置和短链接映射。KV 是最终一致，不适合库存扣减、余额或要求立即一致的任务状态。",
+    "scene": "网站公告每天改一次，却被很多人读取。打开 kv.html：用一个固定的名字取出一条真实公告。",
+    "role": "键是查找用的名字，值是对应的内容。Worker 用 CONFIG 绑定读取 site-announcement，网页展示这个值。",
     "quota": "免费 1GB；每天读 10 万次，写、删除、列表操作各 1000 次。",
     "steps": [
-      "运行 npx wrangler kv namespace create CONFIG，将返回的 binding 改为 CONFIG 并加入配置。",
-      "写入示例：npx wrangler kv key put project-name \"学习项目\" --binding CONFIG --local。",
-      "Worker 用 env.CONFIG.get(\"project-name\") 获取；部署时确认本地和远端值各自配置。"
+      "已创建并绑定 CONFIG 命名空间，远端保存一条 site-announcement 公告。",
+      "打开 kv.html，点击重新读取：/api/kv/announcement 通过真实 KV 绑定按键取值。",
+      "修改远端：npx wrangler kv key put site-announcement \"今晚 8 点学习 R2\" --binding CONFIG --remote。",
+      "修改后网页无需重新发布；其他地区可能 60 秒或更久才读到新公告。",
+      "本地初始化：npx wrangler kv key put site-announcement --path docs/kv-announcement.txt --binding CONFIG --local。"
     ],
-    "code": "// 教学片段：在 Worker handler 内使用绑定\nconst projectName = await env.CONFIG.get(\"project-name\");\nreturn Response.json({ projectName: projectName ?? \"默认项目\" });",
-    "verify": "改变键值后接口显示新配置。跨地区读取可能不会立即一致，适合允许传播延迟的内容。",
-    "pitfall": "KV 不是关系数据库。不要做必须精确的全局计数，也不要假设写入后所有位置立即读到新值。",
+    "code": "// Worker 内通过绑定按键取值；不存在的键返回 null\nconst value = await env.CONFIG.get('site-announcement');",
+    "verify": "公告来自 KV，网页没有内置公告内容或保存到 localStorage。管理员修改远端值后，在传播完成后读取新文字。",
+    "pitfall": "适合读多写少的配置。no-store 不绕过 KV 自身缓存，不要做必须精确的全局计数或库存扣减。公开接口只读固定公告键。",
     "doc": "https://developers.cloudflare.com/kv/platform/pricing/"
   },
   {

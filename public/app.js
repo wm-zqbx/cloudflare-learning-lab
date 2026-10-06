@@ -2,7 +2,8 @@
   'use strict';
   const $ = selector => document.querySelector(selector);
   const lessons = window.LESSONS;
-  const lessonHref = id => id === 'd1' ? 'd1.html' : 'learn.html#' + id;
+  const simpleLessons = new Set(['d1', 'kv']);
+  const lessonHref = id => simpleLessons.has(id) ? id + '.html' : 'learn.html#' + id;
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
   const store = {
     get(key, fallback) { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; } catch { return fallback; } },
@@ -21,13 +22,13 @@
       if (!`${item.name} ${item.headline} ${item.scene}`.toLowerCase().includes(query.toLowerCase())) return '';
       const group = item.group !== lastGroup ? `<p class="nav-group">${escape(item.group)}</p>` : '';
       lastGroup = item.group;
-      return `${group}<a class="lesson-link ${(location.hash.slice(1) || 'assets') === item.id ? 'active' : ''}" href="${item.id === 'd1' ? 'd1.html' : '#' + item.id}"><span>${String(index + 1).padStart(2,'0')}</span>${escape(item.name)}${completed.has(item.id) ? ' ✓' : ''}</a>`;
+      return `${group}<a class="lesson-link ${(location.hash.slice(1) || 'assets') === item.id ? 'active' : ''}" href="${simpleLessons.has(item.id) ? lessonHref(item.id) : '#' + item.id}"><span>${String(index + 1).padStart(2,'0')}</span>${escape(item.name)}${completed.has(item.id) ? ' ✓' : ''}</a>`;
     }).join('');
     if (!$('#lesson-nav').innerHTML) $('#lesson-nav').textContent = '没有匹配的课程。';
   }
   function renderLesson() {
     const id = location.hash.slice(1) || 'assets';
-    if (id === 'd1') { location.replace('d1.html'); return; }
+    if (simpleLessons.has(id)) { location.replace(lessonHref(id)); return; }
     const index = lessons.findIndex(item => item.id === id);
     const item = lessons[index];
     renderNav($('#search').value);

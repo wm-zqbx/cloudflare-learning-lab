@@ -35,3 +35,22 @@ test('D1 lesson cannot pretend to read without a database or accept public write
   const response = await worker.fetch(new Request('https://example.com/api/d1/task'), { DB });
   assert.equal(response.status, 404);
 });
+test('KV lesson reads only the public announcement key from the binding', async () => {
+  let requestedKey;
+  const CONFIG = { get:async key => { requestedKey = key; return '来自测试 KV 的公告'; } };
+  const response = await worker.fetch(new Request('https://example.com/api/kv/announcement?key=private-key'), { CONFIG });
+  assert.equal(requestedKey, 'site-announcement');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('cache-control'), 'no-store');
+  assert.deepEqual(await response.json(), { source:'KV', key:'site-announcement', value:'来自测试 KV 的公告' });
+});
+test('KV missing configuration, absent values and public writes do not report success', async () => {
+  assert.equal((await call('/api/kv/announcement')).status, 503);
+  assert.equal((await call('/api/kv/announcement', {method:'POST'})).status, 405);
+  const response = await worker.fetch(new Request('https://example.com/api/kv/announcement'), { CONFIG:{get:async () => null} });
+  assert.equal(response.status, 404);
+  // An empty string is still a stored value, distinct from a missing key.
+  const empty = await worker.fetch(new Request('https://example.com/api/kv/announcement'), { CONFIG:{get:async () => ''} });
+  assert.equal(empty.status, 200);
+  assert.equal((await empty.json()).value, '');
+});
