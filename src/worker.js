@@ -36,6 +36,28 @@ export default {
         return json({ error: '暂时无法读取公告，请稍后重试' }, 500);
       }
     }
+    if (url.pathname === '/api/r2/sample') {
+      if (request.method !== 'GET') return json({ error: '此样例只接受 GET 读取' }, 405);
+      if (!env.FILES) return json({ error: '真实 R2 实例尚未连接：账号需先开通 R2，再建立桶与文件。' }, 503);
+      try {
+        // Expose only this public teaching object; do not accept visitor-supplied keys.
+        const file = await env.FILES.get('samples/brief.txt');
+        if (!file) return json({ error: 'R2 中没有这份附件。' }, 404);
+        const headers = new Headers({
+          'Content-Type': 'text/plain; charset=utf-8',
+          'Content-Disposition': 'attachment; filename="project-brief.txt"',
+          'Content-Length': String(file.size),
+          'Cache-Control': 'no-store',
+          'ETag': file.httpEtag,
+          'X-Content-Type-Options': 'nosniff',
+          'X-Lab-Source': 'R2'
+        });
+        return new Response(file.body, { headers });
+      } catch {
+        console.error(JSON.stringify({ event: 'r2_read_failed' }));
+        return json({ error: '暂时无法读取 R2 文件，请稍后重试。' }, 500);
+      }
+    }
     if (url.pathname === '/api/echo') {
       if (request.method !== 'POST') return json({ error: '请使用 POST' }, 405);
       if (!request.headers.get('content-type')?.includes('application/json')) return json({ error: '请提交 application/json' }, 415);

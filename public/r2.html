@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>R2：附件与网页分开保存</title>
+  <link rel="stylesheet" href="d1.css">
+  <link rel="stylesheet" href="r2.css">
+  <script defer src="r2.js"></script>
+  <script defer src="analytics.js"></script>
+</head>
+<body>
+  <header><a href="index.html">Cloudflare 学习站</a><span>第 9 课 · R2</span></header>
+  <main>
+    <h1>附件变了，网页不必重发。</h1>
+    <p class="intro">R2 是 Cloudflare 保存文件内容的服务。<br>先看它改善了哪一步，再看程序怎样使用它。</p>
+    <section aria-labelledby="problem-title">
+      <p class="step">01 · 实际问题</p>
+      <h2 id="problem-title">客户不断补充需求附件。</h2>
+      <p>项目网站已经上线，客户又交来一份 PDF。若每次都把附件放进网页源码再发布，开发者就得反复替换文件、发布网站。文件越多，这种维护越费力。</p>
+      <p>把附件放进 R2，网页代码只负责显示下载入口；程序按名字取得文件。附件变化与网页发布便可以分开。</p>
+      <p class="note"><strong>什么时候不需要？</strong>固定的 logo、样式和几份随网站一起更新的文档，继续放在 Workers Static Assets 就足够。需要独立更新或接收用户文件时，再考虑 R2。</p>
+    </section>
+    <section aria-labelledby="concept-title">
+      <p class="step">02 · 三个核心概念</p>
+      <h2 id="concept-title">内容、查找名、容器。</h2>
+      <dl class="concepts">
+        <div><dt>对象：保存的文件</dt><dd>可以理解为文件本体，加上大小、类型等说明。PDF、图片、文本都能存。</dd></div>
+        <div><dt>键：文件的查找名</dt><dd>例如 <code>samples/brief.txt</code>。程序拿这个名字取文件；斜杠只是命名习惯，不是真正的文件夹。</dd></div>
+        <div><dt>桶：容纳这些文件的地方</dt><dd>属于你的 Cloudflare 账号。同一账号的多个 Worker 可以连接同一个桶；它不会因某个网页项目删除而自动消失。</dd></div>
+      </dl>
+      <p class="note"><strong>与前两课的分工：</strong>KV 适合按名字取公告、配置；D1 适合用表查询任务；R2 适合独立管理文件本体。完整项目可以让 D1 记“附件属于哪条任务、查找名是什么”，让 R2 保存 PDF。R2 本身不替你建立这条关联。</p>
+    </section>
+    <section aria-labelledby="flow-title">
+      <p class="step">03 · 运行逻辑与分工</p>
+      <h2 id="flow-title">点击之后，谁做什么？</h2>
+      <ol class="file-flow" aria-label="下载流程">
+        <li><strong>1 · 访客</strong><span>在网页点下载</span></li>
+        <li><strong>2 · 你的 Worker</strong><span>确定文件的键<br>向 R2 请求内容</span></li>
+        <li><strong>3 · Cloudflare R2</strong><span>从云端桶取出文件<br>返回实际内容</span></li>
+        <li><strong>4 · 浏览器</strong><span>收到文件<br>保存到自己的设备</span></li>
+      </ol>
+      <p class="note">本课文件留在 R2 的桶中，不在 Worker 的临时内存或网页代码里。浏览器得到一份副本，云端原件继续保留。</p>
+      <dl class="timeline">
+        <div><dt>第一次与再次下载</dt><dd>本例每次都让 Worker 读取 R2，不保存网页缓存。下载不会消耗掉原件。</dd></div>
+        <div><dt>文件更新或删除</dt><dd>R2 确认替换后，直接读取会得到新内容；确认删除后，程序得到“文件不存在”。设备上已下载的副本仍在。另加缓存的项目需要处理旧副本；本例未加缓存。</dd></div>
+      </dl>
+      <div class="division">
+        <p><strong>开发者做一次：</strong>建桶，让 Worker 连接它，并编写读取及权限规则。桶默认不对外公开；本例的程序只提供一份公开样例。</p>
+        <p><strong>程序每次做：</strong>收请求 → 确定文件 → 调用 R2 → 返回内容。无需运营为每次下载手工发文件。</p>
+        <p><strong>用户或运营决定：</strong>上传什么、谁能下载、何时替换或删除。开发者可以写上传程序，让这些决定触发自动保存；R2 不会默认把网页选中的文件传到云端。</p>
+      </div>
+    </section>
+    <section aria-labelledby="example-title">
+      <p class="step">04 · 一个实例</p>
+      <h2 id="example-title">取回一份公开需求附件。</h2>
+      <p>用很小的文本文件代替 PDF，读取逻辑相同。它的查找名是 <code>samples/brief.txt</code>。</p>
+      <div class="read"><button id="r2-read" type="button">检查并读取文件</button><a id="r2-download" href="/api/r2/sample" download="project-brief.txt" hidden>下载这份附件 →</a></div>
+      <p id="r2-status" role="status">正在检查云端实例状态…</p>
+      <div id="r2-preview-box" hidden><p class="note">下面是接口实际返回的文件内容：</p><pre id="r2-preview"></pre></div>
+      <p class="note"><strong>观察与含义：</strong>读出正文并能下载，证明网页经 Worker 取得了 R2 文件；管理员替换文件后再次读取出现新正文，才进一步证明附件可独立更新。一次成功下载不能证明用户上传、身份校验或任务关联已经实现。</p>
+      <p class="state"><strong>当前范围：</strong>页面和读取程序已完成。账号尚未启用 R2，真实桶与文件待建立。原演示页只显示本地文件信息；用户上传、D1 附件关联、私人文件权限是后续扩展。</p>
+    </section>
+    <details>
+      <summary>需要动手时再看：开通、配置、代码与额度</summary>
+      <p>账号开通页包含 R2 订阅、付款方式和超额使用计费条件，需要账号持有人自己确认。教学文件很小；免费额度仍不是无限容量和请求。</p>
+      <p><a href="https://dash.cloudflare.com/0611ef22eaeaf6496cc593583aa4e87d/r2/plans" target="_blank" rel="noopener">在自己的账号查看 R2 开通页 ↗</a></p>
+      <p>开通后创建项目专用桶并把它连接给 Worker。“绑定”就是让程序通过一个变量访问这个云端资源：</p>
+      <pre>"r2_buckets": [{
+  "binding": "FILES",
+  "bucket_name": "cloudflare-learning-lab-files"
+}]</pre>
+      <p>一次性准备样例（在本仓库目录执行）：</p>
+      <pre>npx wrangler r2 bucket create cloudflare-learning-lab-files
+npx wrangler r2 object put cloudflare-learning-lab-files/samples/brief.txt --file docs/r2-sample.txt --content-type "text/plain; charset=utf-8" --remote</pre>
+      <p>读取的核心逻辑如下，完整处理在仓库中：</p>
+      <pre>const file = await env.FILES.get('samples/brief.txt');
+if (!file) return new Response('文件不存在', { status: 404 });
+return new Response(file.body);</pre>
+      <p>未来上传由程序调用 FILES.put 保存；替换同一个键会覆盖该对象，删除由 FILES.delete 执行。也可以配置按期限清理的规则，但不会默认替你决定什么时候删。</p>
+      <p>R2 桶与 D1、KV 的资源都在账号下，项目配置决定连接哪一个。资源可以共用，但同一桶的读写会互相影响；连接桶并不等于自动拥有按客户隔离的权限。</p>
+      <p>本例接口返回 no-store，让下载通过 Worker 直接读 R2。R2 确认完成的更新与删除不会像 KV 那样等待跨地区旧值传播；但你另加的浏览器或分发缓存仍可能保留旧文件，需要单独处理。</p>
+      <p>Standard 每月免费包含约相当于持续存放 10 GB 的存储用量、100 万次写入等操作、1,000 万次读取等操作。直接从 R2 传出文件不收出网流量费；超出存储和操作额度会计费。其他服务可能另收费。</p>
+      <p>事实核对：2026-10-06。<a href="https://developers.cloudflare.com/r2/api/workers/workers-api-reference/" target="_blank" rel="noopener">文件读取 API ↗</a> · <a href="https://developers.cloudflare.com/r2/reference/consistency/" target="_blank" rel="noopener">更新与缓存 ↗</a> · <a href="https://developers.cloudflare.com/r2/buckets/public-buckets/" target="_blank" rel="noopener">桶的公开访问 ↗</a> · <a href="https://developers.cloudflare.com/r2/pricing/" target="_blank" rel="noopener">当前定价 ↗</a></p>
+    </details>
+    <footer><a href="kv.html">← 上一课：KV 配置</a><a href="learn.html#turnstile">下一课：Turnstile →</a></footer>
+  </main>
+</body>
+</html>

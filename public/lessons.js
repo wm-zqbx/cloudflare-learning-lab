@@ -166,19 +166,19 @@ window.LESSONS = [
     "id": "r2",
     "name": "R2",
     "group": "开发应用",
-    "headline": "把附件从数据库中分离出来",
-    "scene": "项目任务需要附一张设计图。数据库只保存附件 key，图片本体存在文件桶。",
-    "role": "上传请求经过鉴权 → Worker 将文件写入 BUCKET → D1 保存关联 key。下载时 Worker 检查权限，再流式返回 R2 body。",
-    "quota": "Standard 每月 10 GB-month、100 万次 A 类操作、1000 万次 B 类操作免费；直接出网无流量费。超额存储和操作会收费。",
+    "headline": "附件独立保存，网页不必随附件重发",
+    "scene": "客户不断补充需求附件。放进网页源码会反复发布；R2 让程序独立保存和取得文件。固定网页资源继续用 Static Assets 就足够。",
+    "role": "r2.html 依次解释问题、对象/键/桶、下载逻辑、开发者与程序的分工，最后验证一个固定的公开附件。账号尚未开通 R2，真实文件实例待建立。",
+    "quota": "Standard 每月 10 GB-month、100 万次写入等操作、1000 万次读取等操作免费；直接出网无流量费。超额存储和操作会收费。",
     "steps": [
-      "运行 npx wrangler r2 bucket create learning-files，再添加 R2 绑定 BUCKET。",
-      "先使用小文件，给上传设大小和文件类型限制。涉及账户计费开通时先查看控制台条件。",
-      "下载接口用绑定读取，私人文件经过鉴权；不把整个桶直接公开。"
+      "先打开 r2.html 理解职责，开通、命令和配置都在折叠区。",
+      "账号持有人确认 R2 订阅条件后，才创建并连接 cloudflare-learning-lab-files 桶。",
+      "准备一份公開教学文件，程序固定读取 samples/brief.txt；公开接口不允许任意文件查找或写入。"
     ],
-    "code": "// 教学片段：先完成鉴权，再读取文件\nconst object = await env.BUCKET.get(\"example/cover.png\");\nif (!object) return new Response(\"Not found\", { status: 404 });\nconst headers = new Headers();\nobject.writeHttpMetadata(headers);\nheaders.set(\"ETag\", object.httpEtag);\nheaders.set(\"X-Content-Type-Options\", \"nosniff\");\nreturn new Response(object.body, { headers });",
-    "verify": "刷新后仍能下载附件，确认 R2 控制台存在对象。演示页里的文件操作只显示本地文件信息，不上传。",
-    "pitfall": "免出网费不代表容量和请求无限免费。r2.dev 用于开发测试，不能当作无限制生产分发地址。",
-    "doc": "https://developers.cloudflare.com/r2/pricing/"
+    "code": "// 连接 R2 后，程序按查找名取文件\nconst file = await env.FILES.get('samples/brief.txt');\nif (!file) return new Response('文件不存在', {status:404});\nreturn new Response(file.body);",
+    "verify": "连接后读取正文与下载证明程序取到文件；独立替换后读到新正文才进一步证明更新与网站发布分离。目前仅本地 R2 模拟可验证，云端未连接时明确返回 503。",
+    "pitfall": "R2 不自动上传网页选中的文件、不自动记录 D1 任务关联或决定谁能下载。桶默认不公开，项目连接与文件权限需编程处理。",
+    "doc": "https://developers.cloudflare.com/r2/"
   },
   {
     "id": "turnstile",

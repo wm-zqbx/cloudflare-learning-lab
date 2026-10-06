@@ -2,7 +2,7 @@
   'use strict';
   const $ = selector => document.querySelector(selector);
   const lessons = window.LESSONS;
-  const simpleLessons = new Set(['d1', 'kv']);
+  const simpleLessons = new Set(['d1', 'kv', 'r2']);
   const lessonHref = id => simpleLessons.has(id) ? id + '.html' : 'learn.html#' + id;
   const escape = value => String(value).replace(/[&<>"']/g, char => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[char]);
   const store = {

@@ -34,3 +34,7 @@
   Cache-Control: public, max-age=0, must-revalidate, no-transform
 /kv.html
   Cache-Control: public, max-age=0, must-revalidate, no-transform
+/r2
+  Cache-Control: public, max-age=0, must-revalidate, no-transform
+/r2.html
+  Cache-Control: public, max-age=0, must-revalidate, no-transform

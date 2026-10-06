@@ -42,6 +42,7 @@ npm run dev
 | `/worker.html` | 请求与响应对照、7 项真实后端校验实验 |
 | `/d1` | 表、记录与云端保存，一条真实 D1 样例 |
 | `/kv` | 键与值，一条真实的网站公告配置 |
+| `/r2` | 文件独立保存的原因、职责和生命周期；云端实例待开通 |
 
 也可以双击 `public/index.html` 阅读教程和进行本地演示；真实 Worker API 需要通过 Wrangler 开发服务器或云端部署访问。
 
@@ -52,6 +53,11 @@ npm run dev
 - **浏览器任务仅保存在 localStorage；附件不上传；摘要不调用 AI；身份选择不是认证。**
 - 未创建云端 R2、Turnstile、Access、Tunnel、Email Routing 或 AI 资源。教程提供接入步骤和片段，不能把本地模拟当成云端服务已经生效。
 - 当前仓库有 CI 检查与手动部署 workflow。创建仓库不等于已经部署 Cloudflare。
+- R2 课程与读取程序已完成，云端资源尚未连接；账号未启用 R2，接口明确返回 503。不能把本地模拟验证当作真实云端已经生效。
+
+## 后续课程的教学方式
+
+遵守 [教学约定](docs/teaching-guide.md)：实际问题 → 最多三个核心概念 → 完整运行逻辑与职责 → 人工/程序分工 → 一个最小完整实例。默认页面保留解释因果关系的内容；命令、代码、配置、额度和细节折叠。解释不用的情况、与前课区别、账号资源归属及共用、更新/删除与延迟。只按观测报告真实结果。
 
 ## CDN 与缓存实战
 
@@ -121,6 +127,18 @@ npx wrangler kv key put site-announcement --path docs/kv-announcement.txt --bind
 
 2026-10-06 验证：部署后仅用 Wrangler 修改远端公告，从“欢迎来到 Cloudflare 学习站，今天学习 KV。”改为“公告已更新：内容来自 KV，无需重新发布网页。”，再从页面读取；没有再次部署网页或 Worker。
 
+## R2：附件与网页分开保存
+
+[第 9 课](https://lab.aecai.us.ci/r2)以客户不断提交需求附件为问题，解释为什么文件内容独立存放；固定的网页资源仍可继续使用 Static Assets。三个概念是对象（文件及其说明）、键（查找名）、桶（账号中的文件容器）。页面说明程序读取、首次与再次下载、替换/删除后的行为，以及开发者、程序、用户各自负责的事。
+
+准备好的 GET /api/r2/sample 固定读取 FILES 绑定下的 samples/brief.txt，返回文件流、下载响应头和 no-store。它不接受访客指定其他键，也不提供上传和删除接口。docs/r2-sample.txt 是公开虚构附件；没有业务私人资料。前端只预览小文本，8 KiB 是本课的预览限制，不是 R2 文件大小上限。
+
+2026-10-06 账号返回 Cloudflare 错误 10042：请先在控制台开通 R2。开通页显示起步 $0、超额按使用量计费及订阅条款，需要账号持有人自己确认。因此正式 wrangler.jsonc 暂不添加不存在的桶；线上接口返回明确的 503，页面不提供假文件下载。原附件演示仍只查看本地文件信息。
+
+开通后的连接配置、初始化命令与官方依据放在课程折叠区。应建立专用桶 cloudflare-learning-lab-files 并用 FILES 绑定；桶默认私有，只由 Worker 提供固定公开样例。用户上传、D1 的任务附件关联及私人文件权限是后续扩展，R2 不会自动替应用完成。
+
+可用独立本地 R2 模拟验证程序读取。将主配置复制为临时配置，添加 FILES R2 绑定，再用同一个临时配置执行 r2 object put --local 与 wrangler dev --local。本地文件与云端各自独立，开发环境不是开通 R2 的替代证明。临时配置、模拟数据与日志放在被忽略的 work/ 或 .wrangler/。
+
 ## 14 项路线
 
 1. Workers Static Assets：发布网页
@@ -167,6 +185,9 @@ npm run deploy
 - `wrangler.jsonc`：Cloudflare 配置，含 D1 与 KV 绑定，无密钥
 - `public/kv.html`、`public/kv.js`：键值概念与真实公告读取
 - `docs/kv-announcement.txt`：KV 公告初始化样例
+- `public/r2.html`、`public/r2.js`：R2 的问题、概念、逻辑与实例状态
+- `docs/r2-sample.txt`：公开的虚构附件
+- `docs/teaching-guide.md`：后续课程教学标准
 - `docs/d1-intro.sql`：D1 第一课的建表与样例初始化
 - `docs/schema.sql`：完整任务和附件表结构，供后续扩展参考
 - `.github/workflows/`：检查与手动部署

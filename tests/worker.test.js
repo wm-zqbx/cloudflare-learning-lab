@@ -54,3 +54,25 @@ test('KV missing configuration, absent values and public writes do not report su
   assert.equal(empty.status, 200);
   assert.equal((await empty.json()).value, '');
 });
+test('R2 lesson streams the fixed public file with download headers', async () => {
+  const text = '来自文件存储的实际内容';
+  let requestedKey;
+  const FILES = { get:async key => {
+    requestedKey = key;
+    return { body:new Response(text).body, size:new TextEncoder().encode(text).length, httpEtag:'"sample-etag"' };
+  } };
+  const response = await worker.fetch(new Request('https://example.com/api/r2/sample?key=private.pdf'), { FILES });
+  assert.equal(requestedKey, 'samples/brief.txt');
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.equal(response.headers.get('ETag'), '"sample-etag"');
+  assert.match(response.headers.get('Content-Disposition'), /^attachment;/);
+  assert.equal(response.headers.get('X-Lab-Source'), 'R2');
+  assert.equal(await response.text(), text);
+});
+test('R2 cannot claim success without a connection, accept writes, or return a deleted file', async () => {
+  assert.equal((await call('/api/r2/sample')).status, 503);
+  assert.equal((await call('/api/r2/sample', {method:'POST'})).status, 405);
+  const response = await worker.fetch(new Request('https://example.com/api/r2/sample'), { FILES:{get:async () => null} });
+  assert.equal(response.status, 404);
+});
